@@ -10,7 +10,7 @@ import com.app.notespese.data.model.Membro
 import com.app.notespese.data.repository.AuthRepository
 import com.app.notespese.data.repository.GruppoRepository
 import com.app.notespese.data.repository.InvitoRepository
-import kotlinx.coroutines.flow.first
+import com.app.notespese.data.repository.WidgetPreferenceRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -26,6 +26,7 @@ class ImpostazioniGruppoViewModel @Inject constructor(
     private val gruppoRepository: GruppoRepository,
     private val invitoRepository: InvitoRepository,
     authRepository: AuthRepository,
+    private val widgetPrefs: WidgetPreferenceRepository,
 ) : ViewModel() {
 
     private val gruppoId: String = checkNotNull(savedStateHandle["gruppoId"])
@@ -36,6 +37,7 @@ class ImpostazioniGruppoViewModel @Inject constructor(
             val nomeGruppo: String,
             val membri: List<Membro>,
             val userId: String,
+            val widgetSelezionato: Boolean,
         ) : UiState
         data class Errore(val messaggio: String) : UiState
     }
@@ -51,12 +53,14 @@ class ImpostazioniGruppoViewModel @Inject constructor(
         gruppoRepository.osservaGruppo(gruppoId),
         gruppoRepository.osservaMembri(gruppoId),
         authRepository.utenteCorrente,
-    ) { gruppo, membri, utente ->
+        widgetPrefs.widgetGruppoId,
+    ) { gruppo, membri, utente, widgetGruppoId ->
         if (gruppo == null) UiState.Errore("Gruppo non trovato")
         else UiState.Successo(
-            nomeGruppo = gruppo.nome,
-            membri     = membri,
-            userId     = utente?.id ?: "",
+            nomeGruppo        = gruppo.nome,
+            membri            = membri,
+            userId            = utente?.id ?: "",
+            widgetSelezionato = widgetGruppoId == gruppoId,
         )
     }
     .catch { e -> emit(UiState.Errore(e.message ?: "Errore")) }
@@ -94,6 +98,13 @@ class ImpostazioniGruppoViewModel @Inject constructor(
             gruppoRepository.aggiornaMembro(gruppoId, membro.copy(nominativoLocale = nuovoNome.trim()))
             salvandoNome = false
             showEditNome = false
+        }
+    }
+
+    fun toggleWidget() {
+        val state = uiState.value as? UiState.Successo ?: return
+        viewModelScope.launch {
+            widgetPrefs.setWidgetGruppoId(if (state.widgetSelezionato) "" else gruppoId)
         }
     }
 }

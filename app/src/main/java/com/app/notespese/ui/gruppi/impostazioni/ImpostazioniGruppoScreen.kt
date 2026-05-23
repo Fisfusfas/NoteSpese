@@ -22,6 +22,8 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.Widgets
+import androidx.compose.material3.Switch
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -187,6 +189,18 @@ fun ImpostazioniGruppoScreen(
                                 etichetta = "Ricorrenze",
                                 desc      = "Spese che si ripetono ogni mese",
                                 onClick   = onApriRicorrenze,
+                            )
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                            ListItem(
+                                headlineContent   = { Text("Mostra nel widget", style = MaterialTheme.typography.bodyLarge) },
+                                supportingContent = { Text("Questo gruppo appare nel widget home screen", style = MaterialTheme.typography.bodySmall) },
+                                leadingContent    = { Icon(Icons.Default.Widgets, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                                trailingContent   = {
+                                    Switch(
+                                        checked         = state.widgetSelezionato,
+                                        onCheckedChange = { viewModel.toggleWidget() },
+                                    )
+                                },
                             )
                         }
                     }

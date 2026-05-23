@@ -30,6 +30,7 @@ import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.app.notespese.MainActivity
 import com.app.notespese.data.model.Spesa
+import com.app.notespese.data.repository.WidgetPreferenceRepository
 import com.app.notespese.ui.quick.QuickSpesaActivity
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
@@ -42,7 +43,7 @@ import java.util.Locale
 class SpeseWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val data = fetchData()
+        val data = fetchData(context)
         provideContent {
             GlanceTheme {
                 WidgetContent(context, data)
@@ -50,18 +51,26 @@ class SpeseWidget : GlanceAppWidget() {
         }
     }
 
-    private suspend fun fetchData(): WidgetData {
+    private suspend fun fetchData(context: Context): WidgetData {
         val userId = Firebase.auth.currentUser?.uid ?: return WidgetData()
         return try {
             val now   = YearMonth.now()
             val mese  = now.monthValue
             val anno  = now.year
 
+            val widgetPrefs = WidgetPreferenceRepository(context)
+            val savedGruppoId = widgetPrefs.getWidgetGruppoId()
+
             val gruppiDocs = Firebase.firestore.collection("gruppi")
                 .whereArrayContains("membroIds", userId)
                 .get().await().documents
 
-            val gruppoDoc  = gruppiDocs.firstOrNull() ?: return WidgetData()
+            val gruppoDoc = if (savedGruppoId.isNotEmpty()) {
+                gruppiDocs.find { it.id == savedGruppoId } ?: gruppiDocs.firstOrNull()
+            } else {
+                gruppiDocs.firstOrNull()
+            } ?: return WidgetData()
+
             val gruppoId   = gruppoDoc.id
             val nomeGruppo = gruppoDoc.getString("nome") ?: ""
 
