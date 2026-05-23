@@ -8,6 +8,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.app.notespese.data.model.Utente
+import com.app.notespese.ui.analisi.AnalisiMeseScreen
 import com.app.notespese.ui.dashboard.DashboardScreen
 import com.app.notespese.ui.entrate.AggiungiEntrataScreen
 import com.app.notespese.ui.entrate.EntrataScreen
@@ -65,6 +66,9 @@ fun AppNavigation(
                 onApriSaldi        = { id -> navController.navigate(Screen.Saldi.withId(id)) },
                 onApriDebiti       = { id -> navController.navigate(Screen.Debiti.withId(id)) },
                 onApriImpostazioni = { id -> navController.navigate(Screen.ImpostazioniGruppo.withId(id)) },
+                onApriAnalisi      = { gId, mese, anno ->
+                    navController.navigate(Screen.AnalisiMese.withParams(gId, mese, anno))
+                },
             )
         }
 
@@ -156,6 +160,18 @@ fun AppNavigation(
             arguments = listOf(navArgument("gruppoId") { type = NavType.StringType })
         ) {
             Text("Debiti — placeholder")
+        }
+
+        // ── Analisi mese ───────────────────────────────────────────────────────
+        composable(
+            route     = Screen.AnalisiMese.route,
+            arguments = listOf(
+                navArgument("gruppoId") { type = NavType.StringType },
+                navArgument("mese")     { type = NavType.IntType },
+                navArgument("anno")     { type = NavType.IntType },
+            )
+        ) {
+            AnalisiMeseScreen(onNavigateBack = { navController.popBackStack() })
         }
 
         // ── Impostazioni gruppo ────────────────────────────────────────────────

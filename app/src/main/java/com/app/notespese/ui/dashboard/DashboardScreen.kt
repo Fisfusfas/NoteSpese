@@ -72,6 +72,7 @@ fun DashboardScreen(
     onApriSaldi: (String) -> Unit,
     onApriDebiti: (String) -> Unit,
     onApriImpostazioni: (String) -> Unit,
+    onApriAnalisi: (gruppoId: String, mese: Int, anno: Int) -> Unit,
     viewModel: DashboardViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -96,6 +97,7 @@ fun DashboardScreen(
                 onApriSaldi        = { onApriSaldi(gruppoId) },
                 onApriDebiti       = { onApriDebiti(gruppoId) },
                 onApriImpostazioni = { onApriImpostazioni(gruppoId) },
+                onApriAnalisi      = { onApriAnalisi(gruppoId, state.mese, state.anno) },
                 onMesePrecedente   = viewModel::mesePrecedente,
                 onMeseSuccessivo   = viewModel::meseSuccessivo,
             )
@@ -113,6 +115,7 @@ private fun DashboardContent(
     onApriSaldi: () -> Unit,
     onApriDebiti: () -> Unit,
     onApriImpostazioni: () -> Unit,
+    onApriAnalisi: () -> Unit,
     onMesePrecedente: () -> Unit,
     onMeseSuccessivo: () -> Unit,
 ) {
@@ -193,6 +196,7 @@ private fun DashboardContent(
                         valore      = formatEuro(totaleSpese),
                         icona       = Icons.Default.ShoppingCart,
                         coloreIcona = MaterialTheme.colorScheme.primary,
+                        onClick     = onApriAnalisi,
                     )
                     CardRiepilogo(
                         modifier    = Modifier.weight(1f),
@@ -350,9 +354,12 @@ private fun CardRiepilogo(
     icona: ImageVector,
     coloreIcona: Color,
     modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
 ) {
     Card(
         modifier = modifier,
+        onClick  = onClick ?: {},
+        enabled  = onClick != null,
         colors   = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
         ),
