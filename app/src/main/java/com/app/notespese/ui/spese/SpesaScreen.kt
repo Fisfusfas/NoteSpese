@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -236,30 +237,41 @@ private fun RigaSpesa(spesa: Spesa, categoria: Categoria?, onClick: () -> Unit) 
             Text(spesa.descrizione.ifBlank { "Spesa" }, maxLines = 1, overflow = TextOverflow.Ellipsis)
         },
         supportingContent = {
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                if (dataFormattata.isNotEmpty()) {
-                    Text(dataFormattata, style = MaterialTheme.typography.bodySmall)
+            Column {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    if (dataFormattata.isNotEmpty()) {
+                        Text(dataFormattata, style = MaterialTheme.typography.bodySmall)
+                    }
+                    categoria?.let { cat ->
+                        val catColor = parseColore(cat.colore)
+                        SuggestionChip(
+                            onClick  = {},
+                            label    = { Text(cat.nome, style = MaterialTheme.typography.labelSmall) },
+                            colors   = SuggestionChipDefaults.suggestionChipColors(
+                                containerColor = catColor.copy(alpha = 0.15f),
+                                labelColor     = catColor,
+                            ),
+                            modifier = Modifier.height(20.dp),
+                        )
+                    }
+                    if (spesa.condivisa) {
+                        SuggestionChip(
+                            onClick  = {},
+                            label    = { Text("Condivisa", style = MaterialTheme.typography.labelSmall) },
+                            colors   = SuggestionChipDefaults.suggestionChipColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            ),
+                            modifier = Modifier.height(20.dp),
+                        )
+                    }
                 }
-                categoria?.let { cat ->
-                    val catColor = parseColore(cat.colore)
-                    SuggestionChip(
-                        onClick  = {},
-                        label    = { Text(cat.nome, style = MaterialTheme.typography.labelSmall) },
-                        colors   = SuggestionChipDefaults.suggestionChipColors(
-                            containerColor = catColor.copy(alpha = 0.15f),
-                            labelColor     = catColor,
-                        ),
-                        modifier = Modifier.height(20.dp),
-                    )
-                }
-                if (spesa.condivisa) {
-                    SuggestionChip(
-                        onClick  = {},
-                        label    = { Text("Condivisa", style = MaterialTheme.typography.labelSmall) },
-                        colors   = SuggestionChipDefaults.suggestionChipColors(
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                        ),
-                        modifier = Modifier.height(20.dp),
+                if (spesa.note.isNotBlank()) {
+                    Text(
+                        text     = spesa.note,
+                        style    = MaterialTheme.typography.bodySmall,
+                        color    = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }
