@@ -4,6 +4,8 @@ Documentazione di progetto per Claude Code. Aggiornato a: 2026-05-23.
 
 ---
 
+
+
 ## Panoramica
 
 Expense tracker Android nativo multi-gruppo con logica di split avanzata.
