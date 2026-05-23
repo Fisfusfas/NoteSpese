@@ -1,5 +1,6 @@
 package com.app.notespese.ui.gruppi.impostazioni
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,9 +15,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -24,10 +30,12 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -36,6 +44,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
@@ -50,11 +59,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 @Composable
 fun ImpostazioniGruppoScreen(
     onNavigateBack: () -> Unit,
+    onApriCategorie: () -> Unit,
+    onApriRicorrenze: () -> Unit,
+    onApriBudget: () -> Unit,
     viewModel: ImpostazioniGruppoViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // Invite code dialog
+    // ── Dialog invito ──────────────────────────────────────────────────────────
     viewModel.invitoCodice?.let { codice ->
         val clipboard = LocalClipboardManager.current
         AlertDialog(
@@ -65,15 +77,15 @@ fun ImpostazioniGruppoScreen(
                     Text(
                         text   = codice,
                         style  = MaterialTheme.typography.headlineMedium.copy(
-                            fontFamily  = FontFamily.Monospace,
-                            fontWeight  = FontWeight.Bold,
+                            fontFamily    = FontFamily.Monospace,
+                            fontWeight    = FontWeight.Bold,
                             letterSpacing = 4.sp,
                         ),
                         color  = MaterialTheme.colorScheme.primary,
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        text  = "Condividi questo codice con chi vuoi aggiungere al gruppo. Scade tra 48 ore.",
+                        text  = "Condividi questo codice con chi vuoi aggiungere. Scade tra 48 ore.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -91,6 +103,38 @@ fun ImpostazioniGruppoScreen(
             },
             dismissButton = {
                 TextButton(onClick = viewModel::chiudiDialogCodice) { Text("Chiudi") }
+            },
+        )
+    }
+
+    // ── Dialog modifica nome ───────────────────────────────────────────────────
+    if (viewModel.showEditNome) {
+        AlertDialog(
+            onDismissRequest = { viewModel.showEditNome = false },
+            title   = { Text("Il tuo nome nel gruppo") },
+            text    = {
+                OutlinedTextField(
+                    value         = viewModel.nuovoNome,
+                    onValueChange = { viewModel.nuovoNome = it },
+                    label         = { Text("Nome visualizzato") },
+                    singleLine    = true,
+                    modifier      = Modifier.fillMaxWidth(),
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick  = viewModel::salvaNome,
+                    enabled  = viewModel.nuovoNome.isNotBlank() && !viewModel.salvandoNome,
+                ) {
+                    if (viewModel.salvandoNome) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    } else {
+                        Text("Salva")
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.showEditNome = false }) { Text("Annulla") }
             },
         )
     }
@@ -118,28 +162,63 @@ fun ImpostazioniGruppoScreen(
                 },
             ) { innerPadding ->
                 LazyColumn(
-                    modifier       = Modifier.fillMaxSize().padding(innerPadding),
+                    modifier            = Modifier.fillMaxSize().padding(innerPadding),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
 
+                    // ── Gestione gruppo ───────────────────────────────────────
+                    item {
+                        Text(
+                            text     = "Gestione gruppo",
+                            style    = MaterialTheme.typography.titleSmall,
+                            color    = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                        )
+                    }
+                    item {
+                        Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                            RigaNavigazione(
+                                icona     = Icons.Default.Category,
+                                etichetta = "Categorie",
+                                desc      = "Aggiungi, modifica o elimina categorie",
+                                onClick   = onApriCategorie,
+                            )
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                            RigaNavigazione(
+                                icona     = Icons.Default.Repeat,
+                                etichetta = "Ricorrenze",
+                                desc      = "Spese che si ripetono ogni mese",
+                                onClick   = onApriRicorrenze,
+                            )
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                            RigaNavigazione(
+                                icona     = Icons.Default.MonetizationOn,
+                                etichetta = "Budget per categoria",
+                                desc      = "Imposta limiti di spesa mensili",
+                                onClick   = onApriBudget,
+                            )
+                        }
+                    }
+
                     // ── Invita membro ─────────────────────────────────────────
                     item {
+                        Text(
+                            text     = "Invita membro",
+                            style    = MaterialTheme.typography.titleSmall,
+                            color    = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                        )
+                    }
+                    item {
                         Card(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                             colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
-                                    text  = "Invita un membro",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                    fontWeight = FontWeight.SemiBold,
-                                )
-                                Spacer(Modifier.height(4.dp))
-                                Text(
-                                    text  = "Genera un codice a 8 caratteri valido 48 ore. Condividilo con chi vuoi aggiungere al gruppo.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    text       = "Genera un codice a 8 caratteri valido 48 ore. Condividilo con chi vuoi aggiungere.",
+                                    style      = MaterialTheme.typography.bodySmall,
+                                    color      = MaterialTheme.colorScheme.onSecondaryContainer,
                                 )
                                 Spacer(Modifier.height(12.dp))
                                 ElevatedButton(
@@ -178,7 +257,7 @@ fun ImpostazioniGruppoScreen(
                         )
                     }
                     items(state.membri, key = { it.userId }) { membro ->
-                        val nome = membro.nominativoLocale.ifBlank { membro.userId.take(12) }
+                        val nome   = membro.nominativoLocale.ifBlank { membro.userId.take(12) }
                         val isSelf = membro.userId == state.userId
                         ListItem(
                             headlineContent  = {
@@ -199,10 +278,33 @@ fun ImpostazioniGruppoScreen(
                                 Icon(Icons.Default.Person, contentDescription = null,
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant)
                             },
+                            trailingContent   = if (isSelf) ({
+                                IconButton(onClick = viewModel::apriEditNome) {
+                                    Icon(Icons.Default.Edit, contentDescription = "Modifica nome",
+                                        tint = MaterialTheme.colorScheme.primary)
+                                }
+                            }) else null,
                         )
                     }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun RigaNavigazione(
+    icona: ImageVector,
+    etichetta: String,
+    desc: String,
+    onClick: () -> Unit,
+) {
+    ListItem(
+        headlineContent   = { Text(etichetta, style = MaterialTheme.typography.bodyLarge) },
+        supportingContent = { Text(desc, style = MaterialTheme.typography.bodySmall) },
+        leadingContent    = { Icon(icona, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+        trailingContent   = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+        modifier          = Modifier.clickable(onClick = onClick),
+    )
 }

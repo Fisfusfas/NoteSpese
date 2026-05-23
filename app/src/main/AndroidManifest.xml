@@ -3,11 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- Notifiche push (richiesta esplicita da Android 13 / API 33) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <!-- OCR scontrini -->
     <uses-permission android:name="android.permission.CAMERA" />
-    <!-- Note vocali -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <application
@@ -31,6 +28,30 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Hilt-WorkManager: disabilita l'auto-init per usare HiltWorkerFactory -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
+
+        <!-- Widget riepilogo mensile -->
+        <receiver
+            android:name=".widget.SpeseWidgetReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/appwidget_provider" />
+        </receiver>
 
     </application>
 

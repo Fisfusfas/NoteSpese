@@ -25,6 +25,21 @@ sealed class Screen(val route: String) {
     data object ImpostazioniGruppo: Screen("gruppo/{gruppoId}/impostazioni") {
         fun withId(id: String) = "gruppo/$id/impostazioni"
     }
+    data object Categorie : Screen("gruppo/{gruppoId}/categorie") {
+        fun withId(id: String) = "gruppo/$id/categorie"
+    }
+    data object Ricorrenze : Screen("gruppo/{gruppoId}/ricorrenze") {
+        fun withId(id: String) = "gruppo/$id/ricorrenze"
+    }
+    data object AggiungiRicorrenza : Screen("gruppo/{gruppoId}/ricorrenze/aggiungi") {
+        fun withId(id: String) = "gruppo/$id/ricorrenze/aggiungi"
+    }
+    data object ModificaRicorrenza : Screen("gruppo/{gruppoId}/ricorrenze/{ricorrenzaId}/modifica") {
+        fun withIds(gruppoId: String, ricorrenzaId: String) = "gruppo/$gruppoId/ricorrenze/$ricorrenzaId/modifica"
+    }
+    data object BudgetCategorie : Screen("gruppo/{gruppoId}/budget") {
+        fun withId(id: String) = "gruppo/$id/budget"
+    }
     data object AggiungiSpesa   : Screen("gruppo/{gruppoId}/spese/aggiungi") {
         fun withId(id: String) = "gruppo/$id/spese/aggiungi"
     }

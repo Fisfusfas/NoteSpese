@@ -10,6 +10,7 @@ import com.app.notespese.data.model.Membro
 import com.app.notespese.data.repository.AuthRepository
 import com.app.notespese.data.repository.GruppoRepository
 import com.app.notespese.data.repository.InvitoRepository
+import kotlinx.coroutines.flow.first
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -22,7 +23,7 @@ import javax.inject.Inject
 @HiltViewModel
 class ImpostazioniGruppoViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    gruppoRepository: GruppoRepository,
+    private val gruppoRepository: GruppoRepository,
     private val invitoRepository: InvitoRepository,
     authRepository: AuthRepository,
 ) : ViewModel() {
@@ -39,9 +40,12 @@ class ImpostazioniGruppoViewModel @Inject constructor(
         data class Errore(val messaggio: String) : UiState
     }
 
-    var invitoCodice  by mutableStateOf<String?>(null)
-    var erroreInvito  by mutableStateOf<String?>(null)
-    var generando     by mutableStateOf(false)
+    var invitoCodice      by mutableStateOf<String?>(null)
+    var erroreInvito      by mutableStateOf<String?>(null)
+    var generando         by mutableStateOf(false)
+    var showEditNome      by mutableStateOf(false)
+    var nuovoNome         by mutableStateOf("")
+    var salvandoNome      by mutableStateOf(false)
 
     val uiState: StateFlow<UiState> = combine(
         gruppoRepository.osservaGruppo(gruppoId),
@@ -74,4 +78,22 @@ class ImpostazioniGruppoViewModel @Inject constructor(
     }
 
     fun chiudiDialogCodice() { invitoCodice = null }
+
+    fun apriEditNome() {
+        val state = uiState.value as? UiState.Successo ?: return
+        val membro = state.membri.find { it.userId == state.userId }
+        nuovoNome = membro?.nominativoLocale ?: ""
+        showEditNome = true
+    }
+
+    fun salvaNome() {
+        val state = uiState.value as? UiState.Successo ?: return
+        val membro = state.membri.find { it.userId == state.userId } ?: return
+        salvandoNome = true
+        viewModelScope.launch {
+            gruppoRepository.aggiornaMembro(gruppoId, membro.copy(nominativoLocale = nuovoNome.trim()))
+            salvandoNome = false
+            showEditNome = false
+        }
+    }
 }

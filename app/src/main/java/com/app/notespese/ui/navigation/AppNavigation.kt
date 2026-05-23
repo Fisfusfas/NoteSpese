@@ -9,12 +9,16 @@ import androidx.navigation.navArgument
 import com.app.notespese.data.model.Utente
 import com.app.notespese.ui.analisi.AnalisiEntrateScreen
 import com.app.notespese.ui.analisi.AnalisiMeseScreen
+import com.app.notespese.ui.budget.BudgetScreen
+import com.app.notespese.ui.categorie.CategorieScreen
 import com.app.notespese.ui.dashboard.DashboardScreen
 import com.app.notespese.ui.entrate.AggiungiEntrataScreen
 import com.app.notespese.ui.entrate.EntrataScreen
 import com.app.notespese.ui.gruppi.CreaGruppoScreen
 import com.app.notespese.ui.gruppi.ListaGruppiScreen
 import com.app.notespese.ui.gruppi.impostazioni.ImpostazioniGruppoScreen
+import com.app.notespese.ui.ricorrenze.AggiungiRicorrenzaScreen
+import com.app.notespese.ui.ricorrenze.RicorrenzeScreen
 import com.app.notespese.ui.saldi.SaldoScreen
 import com.app.notespese.ui.spese.AggiungiSpesaScreen
 import com.app.notespese.ui.spese.SpesaScreen
@@ -177,8 +181,64 @@ fun AppNavigation(
         composable(
             route     = Screen.ImpostazioniGruppo.route,
             arguments = listOf(navArgument("gruppoId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val gruppoId = backStackEntry.arguments?.getString("gruppoId") ?: return@composable
+            ImpostazioniGruppoScreen(
+                onNavigateBack  = { navController.popBackStack() },
+                onApriCategorie = { navController.navigate(Screen.Categorie.withId(gruppoId)) },
+                onApriRicorrenze = { navController.navigate(Screen.Ricorrenze.withId(gruppoId)) },
+                onApriBudget    = { navController.navigate(Screen.BudgetCategorie.withId(gruppoId)) },
+            )
+        }
+
+        // ── Categorie ──────────────────────────────────────────────────────────
+        composable(
+            route     = Screen.Categorie.route,
+            arguments = listOf(navArgument("gruppoId") { type = NavType.StringType })
         ) {
-            ImpostazioniGruppoScreen(onNavigateBack = { navController.popBackStack() })
+            CategorieScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        // ── Ricorrenze ─────────────────────────────────────────────────────────
+        composable(
+            route     = Screen.Ricorrenze.route,
+            arguments = listOf(navArgument("gruppoId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val gruppoId = backStackEntry.arguments?.getString("gruppoId") ?: return@composable
+            RicorrenzeScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onAggiungi     = { navController.navigate(Screen.AggiungiRicorrenza.withId(gruppoId)) },
+                onModifica     = { ricorrenzaId ->
+                    navController.navigate(Screen.ModificaRicorrenza.withIds(gruppoId, ricorrenzaId))
+                },
+            )
+        }
+
+        // ── Aggiungi ricorrenza ────────────────────────────────────────────────
+        composable(
+            route     = Screen.AggiungiRicorrenza.route,
+            arguments = listOf(navArgument("gruppoId") { type = NavType.StringType })
+        ) {
+            AggiungiRicorrenzaScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        // ── Modifica ricorrenza ────────────────────────────────────────────────
+        composable(
+            route     = Screen.ModificaRicorrenza.route,
+            arguments = listOf(
+                navArgument("gruppoId")     { type = NavType.StringType },
+                navArgument("ricorrenzaId") { type = NavType.StringType },
+            )
+        ) {
+            AggiungiRicorrenzaScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        // ── Budget categorie ───────────────────────────────────────────────────
+        composable(
+            route     = Screen.BudgetCategorie.route,
+            arguments = listOf(navArgument("gruppoId") { type = NavType.StringType })
+        ) {
+            BudgetScreen(onNavigateBack = { navController.popBackStack() })
         }
     }
 }
