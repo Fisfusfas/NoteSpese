@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -24,6 +25,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -42,12 +44,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.app.notespese.data.model.Categoria
 import com.app.notespese.ui.gruppi.parseColore
+import java.text.NumberFormat
+import java.util.Locale
 
 private val PALETTE_COLORI = listOf(
     "#1565C0", "#2E7D32", "#E65100", "#6A1B9A",
@@ -61,6 +65,7 @@ fun CategorieScreen(
     viewModel: CategorieViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val fmt = NumberFormat.getCurrencyInstance(Locale.ITALY)
 
     // ── Dialog add/edit ────────────────────────────────────────────────────────
     if (viewModel.showDialog) {
@@ -81,6 +86,16 @@ fun CategorieScreen(
                         Text(viewModel.errore!!, color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.bodySmall)
                     }
+                    Spacer(Modifier.height(10.dp))
+                    OutlinedTextField(
+                        value           = viewModel.dialogBudget,
+                        onValueChange   = { viewModel.dialogBudget = it; viewModel.errore = null },
+                        label           = { Text("Budget mensile (€, opzionale)") },
+                        prefix          = { Text("€") },
+                        singleLine      = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier        = Modifier.fillMaxWidth(),
+                    )
                     Spacer(Modifier.height(12.dp))
                     Text("Colore", style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -118,7 +133,7 @@ fun CategorieScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title          = { Text("Categorie") },
+                title          = { Text("Categorie e budget") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
@@ -140,7 +155,7 @@ fun CategorieScreen(
                     Text(state.messaggio, color = MaterialTheme.colorScheme.error)
                 }
             is CategorieViewModel.UiState.Successo -> {
-                if (state.categorie.isEmpty()) {
+                if (state.righe.isEmpty()) {
                     Box(Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
                         Text(
                             text      = "Nessuna categoria.\nPremi + per aggiungerne una.",
@@ -154,11 +169,12 @@ fun CategorieScreen(
                         modifier       = Modifier.fillMaxSize().padding(innerPadding),
                         contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 88.dp),
                     ) {
-                        items(state.categorie, key = { it.id }) { cat ->
+                        items(state.righe, key = { it.categoria.id }) { riga ->
                             CategoriaSwipeItem(
-                                cat       = cat,
-                                onModifica = { viewModel.apriModifica(cat) },
-                                onDelete  = { viewModel.elimina(cat.id) },
+                                riga      = riga,
+                                fmt       = fmt,
+                                onModifica = { viewModel.apriModifica(riga) },
+                                onDelete  = { viewModel.elimina(riga.categoria.id) },
                             )
                         }
                     }
@@ -171,7 +187,8 @@ fun CategorieScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CategoriaSwipeItem(
-    cat: Categoria,
+    riga: CategorieViewModel.RigaCategoria,
+    fmt: java.text.NumberFormat,
     onModifica: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -199,13 +216,21 @@ private fun CategoriaSwipeItem(
         },
     ) {
         ListItem(
-            headlineContent  = { Text(cat.nome) },
+            headlineContent  = { Text(riga.categoria.nome) },
+            supportingContent = {
+                if (riga.budgetMensile > 0)
+                    Text("Budget: ${fmt.format(riga.budgetMensile)}", style = MaterialTheme.typography.bodySmall)
+                else
+                    Text("Nessun budget", style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+            },
             leadingContent   = {
                 Box(
-                    modifier = Modifier.size(24.dp).clip(CircleShape).background(parseColore(cat.colore))
+                    modifier = Modifier.size(24.dp).clip(CircleShape).background(parseColore(riga.categoria.colore))
                 )
             },
             modifier         = Modifier.background(MaterialTheme.colorScheme.surface).clickable(onClick = onModifica),
         )
+        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
     }
 }

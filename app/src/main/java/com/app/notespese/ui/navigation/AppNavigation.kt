@@ -9,7 +9,6 @@ import androidx.navigation.navArgument
 import com.app.notespese.data.model.Utente
 import com.app.notespese.ui.analisi.AnalisiEntrateScreen
 import com.app.notespese.ui.analisi.AnalisiMeseScreen
-import com.app.notespese.ui.budget.BudgetScreen
 import com.app.notespese.ui.categorie.CategorieScreen
 import com.app.notespese.ui.dashboard.DashboardScreen
 import com.app.notespese.ui.entrate.AggiungiEntrataScreen
@@ -184,10 +183,9 @@ fun AppNavigation(
         ) { backStackEntry ->
             val gruppoId = backStackEntry.arguments?.getString("gruppoId") ?: return@composable
             ImpostazioniGruppoScreen(
-                onNavigateBack  = { navController.popBackStack() },
-                onApriCategorie = { navController.navigate(Screen.Categorie.withId(gruppoId)) },
+                onNavigateBack   = { navController.popBackStack() },
+                onApriCategorie  = { navController.navigate(Screen.Categorie.withId(gruppoId)) },
                 onApriRicorrenze = { navController.navigate(Screen.Ricorrenze.withId(gruppoId)) },
-                onApriBudget    = { navController.navigate(Screen.BudgetCategorie.withId(gruppoId)) },
             )
         }
 
@@ -233,12 +231,5 @@ fun AppNavigation(
             AggiungiRicorrenzaScreen(onNavigateBack = { navController.popBackStack() })
         }
 
-        // ── Budget categorie ───────────────────────────────────────────────────
-        composable(
-            route     = Screen.BudgetCategorie.route,
-            arguments = listOf(navArgument("gruppoId") { type = NavType.StringType })
-        ) {
-            BudgetScreen(onNavigateBack = { navController.popBackStack() })
-        }
     }
 }

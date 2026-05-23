@@ -22,7 +22,6 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Repeat
-import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -61,7 +60,6 @@ fun ImpostazioniGruppoScreen(
     onNavigateBack: () -> Unit,
     onApriCategorie: () -> Unit,
     onApriRicorrenze: () -> Unit,
-    onApriBudget: () -> Unit,
     viewModel: ImpostazioniGruppoViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -179,8 +177,8 @@ fun ImpostazioniGruppoScreen(
                         Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                             RigaNavigazione(
                                 icona     = Icons.Default.Category,
-                                etichetta = "Categorie",
-                                desc      = "Aggiungi, modifica o elimina categorie",
+                                etichetta = "Categorie e budget",
+                                desc      = "Aggiungi, modifica categorie e imposta budget mensili",
                                 onClick   = onApriCategorie,
                             )
                             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
@@ -189,13 +187,6 @@ fun ImpostazioniGruppoScreen(
                                 etichetta = "Ricorrenze",
                                 desc      = "Spese che si ripetono ogni mese",
                                 onClick   = onApriRicorrenze,
-                            )
-                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                            RigaNavigazione(
-                                icona     = Icons.Default.MonetizationOn,
-                                etichetta = "Budget per categoria",
-                                desc      = "Imposta limiti di spesa mensili",
-                                onClick   = onApriBudget,
                             )
                         }
                     }
