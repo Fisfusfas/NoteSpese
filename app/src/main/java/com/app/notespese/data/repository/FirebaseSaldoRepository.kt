@@ -1,8 +1,12 @@
 package com.app.notespese.data.repository
 
+import com.app.notespese.data.model.MeseConfig
+import com.app.notespese.data.model.Membro
 import com.app.notespese.data.model.Saldo
+import com.app.notespese.data.model.Spesa
 import com.app.notespese.data.model.StatoCreditore
 import com.app.notespese.data.model.StatoDebitore
+import com.app.notespese.domain.usecase.CalcolaSaldiUseCase
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.channels.awaitClose
@@ -17,10 +21,11 @@ class FirebaseSaldoRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
 ) : SaldoRepository {
 
+    private val calcolaUseCase = CalcolaSaldiUseCase()
+
+    private fun gruppoRef(gruppoId: String) = firestore.collection("gruppi").document(gruppoId)
     private fun saldiRef(gruppoId: String, meseId: String) =
-        firestore.collection("gruppi").document(gruppoId)
-            .collection("mesi").document(meseId)
-            .collection("saldi")
+        gruppoRef(gruppoId).collection("mesi").document(meseId).collection("saldi")
 
     override fun osservaSaldi(gruppoId: String, meseId: String): Flow<List<Saldo>> = callbackFlow {
         val listener = saldiRef(gruppoId, meseId)
@@ -32,8 +37,39 @@ class FirebaseSaldoRepository @Inject constructor(
     }
 
     override suspend fun calcolaESalvaSaldi(gruppoId: String, meseId: String): Result<Unit> = runCatching {
-        // Il calcolo reale (debt simplification) è implementato nel domain layer (usecase).
-        // Questo metodo si occupa solo del write su Firestore.
+        val (anno, mese) = meseId.split("-").let { it[0].toInt() to it[1].toInt() }
+        val ref = gruppoRef(gruppoId)
+
+        // 1. Leggi spese del mese
+        val spese = ref.collection("spese")
+            .whereEqualTo("anno", anno)
+            .whereEqualTo("mese", mese)
+            .get().await()
+            .toObjects(Spesa::class.java)
+
+        // 2. Leggi membri
+        val membri = ref.collection("membri")
+            .get().await()
+            .toObjects(Membro::class.java)
+
+        // 3. Leggi MeseConfig (opzionale)
+        val meseDocRef  = ref.collection("mesi").document(meseId)
+        val meseSnap    = meseDocRef.get().await()
+        val meseConfig  = meseSnap.toObject(MeseConfig::class.java)
+
+        // 4. Calcola
+        val nuoviSaldi = calcolaUseCase(spese, membri, meseConfig)
+
+        // 5. Batch: elimina vecchi saldi, scrivi i nuovi
+        val saldiCollRef = meseDocRef.collection("saldi")
+        val vecchi = saldiCollRef.get().await()
+
+        firestore.runBatch { batch ->
+            vecchi.documents.forEach { batch.delete(it.reference) }
+            nuoviSaldi.forEach { saldo -> batch.set(saldiCollRef.document(saldo.id), saldo) }
+            // Crea MeseConfig se non esiste
+            if (!meseSnap.exists()) batch.set(meseDocRef, MeseConfig(id = meseId))
+        }.await()
     }
 
     override suspend fun segnaComePagato(gruppoId: String, meseId: String, saldoId: String): Result<Unit> = runCatching {

@@ -201,7 +201,7 @@ Login
 | 4 | Lista gruppi + Creazione gruppo | ✅ |
 | 5 | Dashboard gruppo | ✅ |
 | 6 | Form aggiunta spesa + CategoriaSelector | ✅ |
-| 7 | Calcolo saldo (debt simplification) + schermata saldi | ⬜ |
+| 7 | Calcolo saldo (debt simplification) + schermata saldi | ✅ |
 | 8 | Sistema inviti con codice 8 caratteri | ⬜ |
 | 9 | Entrate + calcolo coefficiente split | ⬜ |
 | 10 | Ricorrenze automatiche | ⬜ |

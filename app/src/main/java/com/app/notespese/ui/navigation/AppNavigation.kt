@@ -11,6 +11,7 @@ import com.app.notespese.data.model.Utente
 import com.app.notespese.ui.dashboard.DashboardScreen
 import com.app.notespese.ui.gruppi.CreaGruppoScreen
 import com.app.notespese.ui.gruppi.ListaGruppiScreen
+import com.app.notespese.ui.saldi.SaldoScreen
 import com.app.notespese.ui.spese.AggiungiSpesaScreen
 import com.app.notespese.ui.spese.SpesaScreen
 
@@ -100,7 +101,7 @@ fun AppNavigation(
             route     = Screen.Saldi.route,
             arguments = listOf(navArgument("gruppoId") { type = NavType.StringType })
         ) {
-            Text("Saldi — placeholder step 7")
+            SaldoScreen(onNavigateBack = { navController.popBackStack() })
         }
 
         // ── Debiti ─────────────────────────────────────────────────────────────
