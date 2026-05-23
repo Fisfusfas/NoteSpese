@@ -135,8 +135,11 @@ class SaldoViewModel @Inject constructor(
     fun salvaSplit() {
         val state  = uiState.value as? UiState.Successo ?: return
         val meseId = "%04d-%02d".format(state.anno, state.mese)
-        val pesi   = if (splitModalita == ModalitaSplit.CINQUANTA) emptyMap()
-                     else splitPesi.mapValues { it.value.toDoubleOrNull() ?: 1.0 }
+        // DA_ENTRATE e CINQUANTA non richiedono pesi manuali
+        val pesi   = when (splitModalita) {
+            ModalitaSplit.CINQUANTA, ModalitaSplit.DA_ENTRATE -> emptyMap()
+            else -> splitPesi.mapValues { it.value.toDoubleOrNull() ?: 1.0 }
+        }
         showSplitDialog = false
         viewModelScope.launch {
             azioneEsito = AzioneEsito.Caricamento

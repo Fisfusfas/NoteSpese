@@ -2,7 +2,7 @@ package com.app.notespese.data.model
 
 enum class Ruolo { ADMIN, MEMBRO }
 
-enum class ModalitaSplit { COEFFICIENTE, CINQUANTA, PERSONALIZZATO }
+enum class ModalitaSplit { COEFFICIENTE, CINQUANTA, PERSONALIZZATO, DA_ENTRATE }
 
 enum class TipoSpesa { FISSA, VARIABILE }
 

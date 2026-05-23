@@ -3,12 +3,11 @@ package com.app.notespese.ui.analisi
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.app.notespese.data.model.Entrata
 import com.app.notespese.data.model.Membro
-import com.app.notespese.data.model.Spesa
 import com.app.notespese.data.repository.CategoriaRepository
 import com.app.notespese.data.repository.EntrataRepository
 import com.app.notespese.data.repository.GruppoRepository
-import com.app.notespese.data.repository.SpesaRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -18,11 +17,10 @@ import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
 @HiltViewModel
-class AnalisiMeseViewModel @Inject constructor(
+class AnalisiEntrateViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    spesaRepository: SpesaRepository,
-    categoriaRepository: CategoriaRepository,
     entrataRepository: EntrataRepository,
+    categoriaRepository: CategoriaRepository,
     gruppoRepository: GruppoRepository,
 ) : ViewModel() {
 
@@ -30,21 +28,21 @@ class AnalisiMeseViewModel @Inject constructor(
     val mese: Int        = checkNotNull(savedStateHandle["mese"])
     val anno: Int        = checkNotNull(savedStateHandle["anno"])
 
-    data class CategoriaAnalisi(
+    data class CategoriaEntrataAnalisi(
         val categoriaId: String,
         val nome: String,
         val colore: String,
         val totale: Double,
-        val nSpese: Int,
+        val nEntrate: Int,
         val percentualeBar: Float,
         val percentualeLabel: String,
     )
 
-    data class PaganteAnalisi(
+    data class PersonaAnalisi(
         val userId: String,
         val nome: String,
         val totale: Double,
-        val nSpese: Int,
+        val nEntrate: Int,
         val percentualeBar: Float,
         val coloreIdx: Int,
     )
@@ -52,65 +50,59 @@ class AnalisiMeseViewModel @Inject constructor(
     sealed interface UiState {
         data object Caricamento : UiState
         data class Successo(
-            val totaleSpese: Double,
-            val totaleEntrate: Double,
-            val perCategoria: List<CategoriaAnalisi>,
-            val perPagante: List<PaganteAnalisi>,
-            val spese: List<Spesa>,
+            val totale: Double,
+            val perCategoria: List<CategoriaEntrataAnalisi>,
+            val perPersona: List<PersonaAnalisi>,
+            val entrate: List<Entrata>,
             val membri: List<Membro>,
         ) : UiState
         data class Errore(val messaggio: String) : UiState
     }
 
     val uiState: StateFlow<UiState> = combine(
-        spesaRepository.osservaSpesePerMese(gruppoId, mese, anno),
-        categoriaRepository.osservaCategorie(gruppoId),
         entrataRepository.osservaEntratePerMese(gruppoId, mese, anno),
+        categoriaRepository.osservaCategorie(gruppoId),
         gruppoRepository.osservaMembri(gruppoId),
-    ) { spese, categorie, entrate, membri ->
-        val totaleSpese   = spese.sumOf { it.importo }
-        val totaleEntrate = entrate.sumOf { it.importo }
-        val basePerc      = if (totaleEntrate > 0) totaleEntrate else totaleSpese
-        val vsEntrate     = totaleEntrate > 0
+    ) { entrate, categorie, membri ->
+        val totale = entrate.sumOf { it.importo }
 
-        val perCategoria = spese
+        val perCategoria = entrate
             .groupBy { it.categoriaId }
             .map { (catId, gruppo) ->
                 val cat      = categorie.find { it.id == catId }
                 val subtotal = gruppo.sumOf { it.importo }
-                val perc     = if (basePerc > 0) (subtotal / basePerc).toFloat() else 0f
-                CategoriaAnalisi(
+                val perc     = if (totale > 0) (subtotal / totale).toFloat() else 0f
+                CategoriaEntrataAnalisi(
                     categoriaId      = catId,
                     nome             = cat?.nome ?: "Senza categoria",
                     colore           = cat?.colore ?: "#9E9E9E",
                     totale           = subtotal,
-                    nSpese           = gruppo.size,
+                    nEntrate         = gruppo.size,
                     percentualeBar   = perc.coerceAtMost(1f),
-                    percentualeLabel = "${(perc * 100).toInt()}% ${if (vsEntrate) "entrate" else "tot."}",
+                    percentualeLabel = "${(perc * 100).toInt()}% tot.",
                 )
             }
             .sortedByDescending { it.totale }
 
-        val perPagante = spese
-            .filter { it.pagante.isNotBlank() }
-            .groupBy { it.pagante }
+        val perPersona = entrate
+            .filter { it.persona.isNotBlank() }
+            .groupBy { it.persona }
             .map { (userId, gruppo) ->
                 val membro   = membri.find { it.userId == userId }
                 val nome     = membro?.nominativoLocale?.ifBlank { null } ?: userId.take(8)
                 val subtotal = gruppo.sumOf { it.importo }
-                val perc     = if (totaleSpese > 0) (subtotal / totaleSpese).toFloat() else 0f
-                PaganteAnalisi(userId, nome, subtotal, gruppo.size, perc, 0)
+                val perc     = if (totale > 0) (subtotal / totale).toFloat() else 0f
+                PersonaAnalisi(userId, nome, subtotal, gruppo.size, perc, 0)
             }
             .sortedByDescending { it.totale }
             .mapIndexed { idx, p -> p.copy(coloreIdx = idx) }
 
         UiState.Successo(
-            totaleSpese   = totaleSpese,
-            totaleEntrate = totaleEntrate,
-            perCategoria  = perCategoria,
-            perPagante    = perPagante,
-            spese         = spese,
-            membri        = membri,
+            totale       = totale,
+            perCategoria = perCategoria,
+            perPersona   = perPersona,
+            entrate      = entrate,
+            membri       = membri,
         ) as UiState
     }
     .catch { e -> emit(UiState.Errore(e.message ?: "Errore sconosciuto")) }

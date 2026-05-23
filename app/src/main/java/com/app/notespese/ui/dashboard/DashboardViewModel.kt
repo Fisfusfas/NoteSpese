@@ -3,9 +3,11 @@ package com.app.notespese.ui.dashboard
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.app.notespese.data.model.Entrata
 import com.app.notespese.data.model.Gruppo
 import com.app.notespese.data.model.Membro
 import com.app.notespese.data.model.Spesa
+import com.app.notespese.data.repository.EntrataRepository
 import com.app.notespese.data.repository.GruppoRepository
 import com.app.notespese.data.repository.SpesaRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -15,7 +17,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import java.time.YearMonth
 import javax.inject.Inject
@@ -25,6 +26,7 @@ class DashboardViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val gruppoRepository: GruppoRepository,
     private val spesaRepository: SpesaRepository,
+    private val entrataRepository: EntrataRepository,
 ) : ViewModel() {
 
     private val gruppoId: String = checkNotNull(savedStateHandle["gruppoId"])
@@ -35,6 +37,7 @@ class DashboardViewModel @Inject constructor(
             val gruppo: Gruppo,
             val membri: List<Membro>,
             val speseDelMese: List<Spesa>,
+            val entrateDelMese: List<Entrata>,
             val mese: Int,
             val anno: Int,
         ) : UiState
@@ -50,9 +53,10 @@ class DashboardViewModel @Inject constructor(
                 gruppoRepository.osservaGruppo(gruppoId),
                 gruppoRepository.osservaMembri(gruppoId),
                 spesaRepository.osservaSpesePerMese(gruppoId, mese, anno),
-            ) { gruppo, membri, spese ->
+                entrataRepository.osservaEntratePerMese(gruppoId, mese, anno),
+            ) { gruppo, membri, spese, entrate ->
                 if (gruppo == null) UiState.Errore("Gruppo non trovato")
-                else UiState.Successo(gruppo, membri, spese, mese, anno)
+                else UiState.Successo(gruppo, membri, spese, entrate, mese, anno)
             }
         }
         .catch { e -> emit(UiState.Errore(e.message ?: "Errore sconosciuto")) }

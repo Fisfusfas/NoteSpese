@@ -8,6 +8,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.app.notespese.data.model.Utente
+import com.app.notespese.ui.analisi.AnalisiEntrateScreen
 import com.app.notespese.ui.analisi.AnalisiMeseScreen
 import com.app.notespese.ui.dashboard.DashboardScreen
 import com.app.notespese.ui.entrate.AggiungiEntrataScreen
@@ -60,15 +61,18 @@ fun AppNavigation(
         ) { backStackEntry ->
             val gruppoId = backStackEntry.arguments?.getString("gruppoId") ?: return@composable
             DashboardScreen(
-                gruppoId           = gruppoId,
-                onNavigateBack     = { navController.popBackStack() },
-                onApriSpese        = { id -> navController.navigate(Screen.Spese.withId(id)) },
-                onApriEntrate      = { id -> navController.navigate(Screen.Entrate.withId(id)) },
-                onApriSaldi        = { id -> navController.navigate(Screen.Saldi.withId(id)) },
-                onApriDebiti       = { id -> navController.navigate(Screen.Debiti.withId(id)) },
-                onApriImpostazioni = { id -> navController.navigate(Screen.ImpostazioniGruppo.withId(id)) },
-                onApriAnalisi      = { gId, mese, anno ->
+                gruppoId             = gruppoId,
+                onNavigateBack       = { navController.popBackStack() },
+                onApriSpese          = { id -> navController.navigate(Screen.Spese.withId(id)) },
+                onApriEntrate        = { id -> navController.navigate(Screen.Entrate.withId(id)) },
+                onApriSaldi          = { id -> navController.navigate(Screen.Saldi.withId(id)) },
+                onApriDebiti         = { id -> navController.navigate(Screen.Debiti.withId(id)) },
+                onApriImpostazioni   = { id -> navController.navigate(Screen.ImpostazioniGruppo.withId(id)) },
+                onApriAnalisi        = { gId, mese, anno ->
                     navController.navigate(Screen.AnalisiMese.withParams(gId, mese, anno))
+                },
+                onApriAnalisiEntrate = { gId, mese, anno ->
+                    navController.navigate(Screen.AnalisiEntrateMese.withParams(gId, mese, anno))
                 },
             )
         }
@@ -92,9 +96,7 @@ fun AppNavigation(
             route     = Screen.AggiungiSpesa.route,
             arguments = listOf(navArgument("gruppoId") { type = NavType.StringType })
         ) {
-            AggiungiSpesaScreen(
-                onNavigateBack = { navController.popBackStack() },
-            )
+            AggiungiSpesaScreen(onNavigateBack = { navController.popBackStack() })
         }
 
         // ── Modifica spesa ─────────────────────────────────────────────────────
@@ -105,9 +107,7 @@ fun AppNavigation(
                 navArgument("spesaId")  { type = NavType.StringType },
             )
         ) {
-            AggiungiSpesaScreen(
-                onNavigateBack = { navController.popBackStack() },
-            )
+            AggiungiSpesaScreen(onNavigateBack = { navController.popBackStack() })
         }
 
         // ── Entrate ────────────────────────────────────────────────────────────
@@ -129,22 +129,18 @@ fun AppNavigation(
             route     = Screen.AggiungiEntrata.route,
             arguments = listOf(navArgument("gruppoId") { type = NavType.StringType })
         ) {
-            AggiungiEntrataScreen(
-                onNavigateBack = { navController.popBackStack() },
-            )
+            AggiungiEntrataScreen(onNavigateBack = { navController.popBackStack() })
         }
 
         // ── Modifica entrata ───────────────────────────────────────────────────
         composable(
             route     = Screen.ModificaEntrata.route,
             arguments = listOf(
-                navArgument("gruppoId")   { type = NavType.StringType },
-                navArgument("entrataId")  { type = NavType.StringType },
+                navArgument("gruppoId")  { type = NavType.StringType },
+                navArgument("entrataId") { type = NavType.StringType },
             )
         ) {
-            AggiungiEntrataScreen(
-                onNavigateBack = { navController.popBackStack() },
-            )
+            AggiungiEntrataScreen(onNavigateBack = { navController.popBackStack() })
         }
 
         // ── Saldi ──────────────────────────────────────────────────────────────
@@ -163,7 +159,7 @@ fun AppNavigation(
             Text("Debiti — placeholder")
         }
 
-        // ── Analisi mese ───────────────────────────────────────────────────────
+        // ── Analisi spese mese ─────────────────────────────────────────────────
         composable(
             route     = Screen.AnalisiMese.route,
             arguments = listOf(
@@ -173,6 +169,18 @@ fun AppNavigation(
             )
         ) {
             AnalisiMeseScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        // ── Analisi entrate mese ───────────────────────────────────────────────
+        composable(
+            route     = Screen.AnalisiEntrateMese.route,
+            arguments = listOf(
+                navArgument("gruppoId") { type = NavType.StringType },
+                navArgument("mese")     { type = NavType.IntType },
+                navArgument("anno")     { type = NavType.IntType },
+            )
+        ) {
+            AnalisiEntrateScreen(onNavigateBack = { navController.popBackStack() })
         }
 
         // ── Impostazioni gruppo ────────────────────────────────────────────────

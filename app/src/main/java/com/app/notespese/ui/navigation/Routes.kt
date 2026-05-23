@@ -43,4 +43,7 @@ sealed class Screen(val route: String) {
     data object AnalisiMese : Screen("gruppo/{gruppoId}/analisi/{mese}/{anno}") {
         fun withParams(gruppoId: String, mese: Int, anno: Int) = "gruppo/$gruppoId/analisi/$mese/$anno"
     }
+    data object AnalisiEntrateMese : Screen("gruppo/{gruppoId}/analisi-entrate/{mese}/{anno}") {
+        fun withParams(gruppoId: String, mese: Int, anno: Int) = "gruppo/$gruppoId/analisi-entrate/$mese/$anno"
+    }
 }

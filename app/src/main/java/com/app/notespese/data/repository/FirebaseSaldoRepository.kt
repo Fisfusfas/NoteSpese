@@ -1,5 +1,6 @@
 package com.app.notespese.data.repository
 
+import com.app.notespese.data.model.Entrata
 import com.app.notespese.data.model.MeseConfig
 import com.app.notespese.data.model.Membro
 import com.app.notespese.data.model.ModalitaSplit
@@ -79,10 +80,31 @@ class FirebaseSaldoRepository @Inject constructor(
         val meseSnap    = meseDocRef.get().await()
         val meseConfig  = meseSnap.toObject(MeseConfig::class.java)
 
-        // 4. Calcola
-        val nuoviSaldi = calcolaUseCase(spese, membri, meseConfig)
+        // 4. Se DA_ENTRATE: calcola i pesi proporzionalmente alle entrate reali del mese
+        //    coeff_A = entrate_A / totale_entrate
+        val effectiveConfig = if (meseConfig?.modalitaSplit == ModalitaSplit.DA_ENTRATE.name) {
+            val entrate = ref.collection("entrate")
+                .whereEqualTo("anno", anno)
+                .whereEqualTo("mese", mese)
+                .get().await()
+                .toObjects(Entrata::class.java)
+            val totEnt = entrate.filter { it.persona.isNotBlank() }.sumOf { it.importo }
+            val pesi: Map<String, Double> = if (totEnt > 0) {
+                entrate
+                    .filter { it.persona.isNotBlank() }
+                    .groupBy { it.persona }
+                    .mapValues { (_, lista) -> lista.sumOf { it.importo } / totEnt }
+            } else emptyMap()
+            meseConfig.copy(
+                modalitaSplit       = ModalitaSplit.COEFFICIENTE.name,
+                splitPersonalizzato = pesi,
+            )
+        } else meseConfig
 
-        // 5. Batch: elimina vecchi saldi, scrivi i nuovi
+        // 5. Calcola
+        val nuoviSaldi = calcolaUseCase(spese, membri, effectiveConfig)
+
+        // 6. Batch: elimina vecchi saldi, scrivi i nuovi
         val saldiCollRef = meseDocRef.collection("saldi")
         val vecchi = saldiCollRef.get().await()
 

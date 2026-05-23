@@ -199,10 +199,11 @@ private fun SaldoContent(
 
                 // Suddivisione row
                 val splitLabel = when (state.meseConfig?.modalitaSplit) {
-                    ModalitaSplit.CINQUANTA.name     -> "Equa (50/50)"
-                    ModalitaSplit.COEFFICIENTE.name  -> "Coefficienti"
+                    ModalitaSplit.CINQUANTA.name      -> "Equa (50/50)"
+                    ModalitaSplit.COEFFICIENTE.name   -> "Coefficienti"
                     ModalitaSplit.PERSONALIZZATO.name -> "Percentuali fisse"
-                    else                             -> "Equa (predefinita)"
+                    ModalitaSplit.DA_ENTRATE.name     -> "Da entrate del mese"
+                    else                              -> "Equa (predefinita)"
                 }
                 Row(
                     modifier              = Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp),
@@ -294,9 +295,10 @@ private fun SplitConfigDialog(
     onConferma: () -> Unit,
 ) {
     val opzioni = listOf(
-        Triple(ModalitaSplit.CINQUANTA,     "Equa (50/50)",         "Ogni spesa condivisa è divisa in parti uguali"),
-        Triple(ModalitaSplit.COEFFICIENTE,  "Coefficienti",         "Le spese si dividono in base ai pesi (es. 1:2 per rapporto redditi)"),
-        Triple(ModalitaSplit.PERSONALIZZATO,"Percentuali fisse",    "Inserisci la percentuale (es. 30 e 70, devono sommare 100)"),
+        Triple(ModalitaSplit.CINQUANTA,     "Equa (50/50)",              "Ogni spesa condivisa è divisa in parti uguali tra tutti"),
+        Triple(ModalitaSplit.DA_ENTRATE,    "Da entrate del mese",       "I coefficienti vengono calcolati automaticamente dalle entrate registrate (entrata_A / totale_entrate)"),
+        Triple(ModalitaSplit.COEFFICIENTE,  "Coefficienti manuali",      "Inserisci un peso per ogni membro (es. 1 e 2 = rapporto 1:2)"),
+        Triple(ModalitaSplit.PERSONALIZZATO,"Percentuali fisse",         "Inserisci la percentuale per ogni membro (es. 30 e 70, devono sommare 100)"),
     )
 
     AlertDialog(
@@ -328,7 +330,7 @@ private fun SplitConfigDialog(
                     }
                 }
 
-                if (modalita != ModalitaSplit.CINQUANTA) {
+                if (modalita != ModalitaSplit.CINQUANTA && modalita != ModalitaSplit.DA_ENTRATE) {
                     Spacer(Modifier.height(8.dp))
                     val hint = if (modalita == ModalitaSplit.PERSONALIZZATO) "Percentuale (%)" else "Peso (es. 1, 2)"
                     membri.forEach { membro ->

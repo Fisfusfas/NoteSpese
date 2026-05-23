@@ -27,14 +27,11 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SuggestionChip
-import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -53,27 +50,24 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.app.notespese.data.model.Entrata
 import com.app.notespese.data.model.Membro
-import com.app.notespese.data.model.Spesa
 import com.app.notespese.ui.gruppi.parseColore
 import java.text.NumberFormat
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeFormatter.ofPattern
 import java.util.Locale
 
-private val PALETTE_PAGANTI = listOf(
+private val PALETTE_PERSONE = listOf(
     Color(0xFF1565C0), Color(0xFF2E7D32), Color(0xFFE65100),
     Color(0xFF6A1B9A), Color(0xFF00838F), Color(0xFFAD1457),
 )
-private fun colorePagante(idx: Int): Color = PALETTE_PAGANTI[idx % PALETTE_PAGANTI.size]
+private fun colorePersona(idx: Int): Color = PALETTE_PERSONE[idx % PALETTE_PERSONE.size]
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AnalisiMeseScreen(
+fun AnalisiEntrateScreen(
     onNavigateBack: () -> Unit,
-    viewModel: AnalisiMeseViewModel = hiltViewModel(),
+    viewModel: AnalisiEntrateViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -86,7 +80,7 @@ fun AnalisiMeseScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Analisi — $meseLabel") },
+                title = { Text("Entrate — $meseLabel") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
@@ -96,20 +90,20 @@ fun AnalisiMeseScreen(
         }
     ) { innerPadding ->
         when (val state = uiState) {
-            is AnalisiMeseViewModel.UiState.Caricamento ->
+            is AnalisiEntrateViewModel.UiState.Caricamento ->
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-            is AnalisiMeseViewModel.UiState.Errore ->
+            is AnalisiEntrateViewModel.UiState.Errore ->
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(state.messaggio, color = MaterialTheme.colorScheme.error)
                 }
-            is AnalisiMeseViewModel.UiState.Successo -> {
+            is AnalisiEntrateViewModel.UiState.Successo -> {
                 if (state.perCategoria.isEmpty()) {
                     Box(
                         modifier         = Modifier.fillMaxSize().padding(innerPadding),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            text      = "Nessuna spesa per questo mese.",
+                            text      = "Nessuna entrata per questo mese.",
                             style     = MaterialTheme.typography.bodyMedium,
                             color     = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
@@ -118,7 +112,6 @@ fun AnalisiMeseScreen(
                     }
                 } else {
                     val fmt = NumberFormat.getCurrencyInstance(Locale.ITALY)
-                    // UI-only state: which category card is expanded
                     var expandedCatId by rememberSaveable { mutableStateOf<String?>(null) }
 
                     LazyColumn(
@@ -126,42 +119,24 @@ fun AnalisiMeseScreen(
                         contentPadding      = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
-                        // ── Riepilogo totali ────────────────────────────────────
+                        // ── Riepilogo totale ────────────────────────────────────
                         item {
                             Card(
                                 colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
-                                Column(modifier = Modifier.padding(16.dp)) {
-                                    Row(
-                                        modifier              = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment     = Alignment.CenterVertically,
-                                    ) {
-                                        Text("Spese del mese", style = MaterialTheme.typography.bodyMedium)
-                                        Text(
-                                            text       = fmt.format(state.totaleSpese),
-                                            style      = MaterialTheme.typography.titleLarge,
-                                            fontWeight = FontWeight.Bold,
-                                            color      = MaterialTheme.colorScheme.error,
-                                        )
-                                    }
-                                    if (state.totaleEntrate > 0) {
-                                        Spacer(Modifier.height(4.dp))
-                                        Row(
-                                            modifier              = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment     = Alignment.CenterVertically,
-                                        ) {
-                                            Text("Entrate del mese", style = MaterialTheme.typography.bodyMedium)
-                                            Text(
-                                                text       = fmt.format(state.totaleEntrate),
-                                                style      = MaterialTheme.typography.titleMedium,
-                                                fontWeight = FontWeight.SemiBold,
-                                                color      = Color(0xFF2E7D32),
-                                            )
-                                        }
-                                    }
+                                Row(
+                                    modifier              = Modifier.fillMaxWidth().padding(16.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment     = Alignment.CenterVertically,
+                                ) {
+                                    Text("Entrate del mese", style = MaterialTheme.typography.bodyMedium)
+                                    Text(
+                                        text       = fmt.format(state.totale),
+                                        style      = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        color      = Color(0xFF2E7D32),
+                                    )
                                 }
                             }
                         }
@@ -176,12 +151,12 @@ fun AnalisiMeseScreen(
                         }
                         items(state.perCategoria, key = { it.categoriaId }) { cat ->
                             val isExpanded = expandedCatId == cat.categoriaId
-                            val speseCategoria = remember(cat.categoriaId, state.spese) {
-                                state.spese
+                            val entrateCategoria = remember(cat.categoriaId, state.entrate) {
+                                state.entrate
                                     .filter { it.categoriaId == cat.categoriaId }
-                                    .sortedByDescending { it.data?.seconds ?: 0 }
+                                    .sortedByDescending { it.importo }
                             }
-                            CardCategoria(
+                            CardCategoriaEntrata(
                                 cat        = cat,
                                 isExpanded = isExpanded,
                                 onClick    = {
@@ -194,25 +169,25 @@ fun AnalisiMeseScreen(
                                     verticalArrangement = Arrangement.spacedBy(4.dp),
                                 ) {
                                     Spacer(Modifier.height(2.dp))
-                                    speseCategoria.forEach { spesa ->
-                                        RigaSpesaDettaglio(spesa = spesa, membri = state.membri)
+                                    entrateCategoria.forEach { entrata ->
+                                        RigaEntrataDettaglio(entrata = entrata, membri = state.membri)
                                     }
                                 }
                             }
                         }
 
-                        // ── Chi ha pagato (solo se >1 pagante) ──────────────────
-                        if (state.perPagante.size > 1) {
+                        // ── Chi ha ricevuto (solo se >1 persona) ───────────────
+                        if (state.perPersona.size > 1) {
                             item { Spacer(Modifier.height(4.dp)) }
                             item {
                                 Text(
-                                    text  = "Chi ha pagato",
+                                    text  = "Chi ha ricevuto",
                                     style = MaterialTheme.typography.titleSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
-                            items(state.perPagante) { pagante ->
-                                CardPagante(pagante = pagante)
+                            items(state.perPersona) { persona ->
+                                CardPersona(persona = persona)
                             }
                         }
                     }
@@ -223,8 +198,8 @@ fun AnalisiMeseScreen(
 }
 
 @Composable
-private fun CardCategoria(
-    cat: AnalisiMeseViewModel.CategoriaAnalisi,
+private fun CardCategoriaEntrata(
+    cat: AnalisiEntrateViewModel.CategoriaEntrataAnalisi,
     isExpanded: Boolean,
     onClick: () -> Unit,
 ) {
@@ -250,6 +225,7 @@ private fun CardCategoria(
                     text       = NumberFormat.getCurrencyInstance(Locale.ITALY).format(cat.totale),
                     style      = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold,
+                    color      = Color(0xFF2E7D32),
                 )
                 Spacer(Modifier.width(4.dp))
                 Icon(
@@ -268,7 +244,7 @@ private fun CardCategoria(
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                text  = "${cat.nSpese} ${if (cat.nSpese == 1) "spesa" else "spese"}  ·  ${cat.percentualeLabel}",
+                text  = "${cat.nEntrate} ${if (cat.nEntrate == 1) "entrata" else "entrate"}  ·  ${cat.percentualeLabel}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -277,16 +253,10 @@ private fun CardCategoria(
 }
 
 @Composable
-private fun RigaSpesaDettaglio(spesa: Spesa, membri: List<Membro>) {
-    val dataLabel = remember(spesa.data) {
-        spesa.data?.toDate()?.let { date ->
-            Instant.ofEpochMilli(date.time).atZone(ZoneId.systemDefault()).toLocalDate()
-                .format(ofPattern("d MMM", Locale.ITALIAN))
-        } ?: "${spesa.mese}/${spesa.anno}"
-    }
-    val paganteNome = remember(spesa.pagante, membri) {
-        val m = membri.find { it.userId == spesa.pagante }
-        m?.nominativoLocale?.ifBlank { null } ?: spesa.pagante.take(8)
+private fun RigaEntrataDettaglio(entrata: Entrata, membri: List<Membro>) {
+    val personaNome = remember(entrata.persona, membri) {
+        val m = membri.find { it.userId == entrata.persona }
+        m?.nominativoLocale?.ifBlank { null } ?: entrata.persona.take(8).ifBlank { "—" }
     }
     val fmt = NumberFormat.getCurrencyInstance(Locale.ITALY)
 
@@ -301,55 +271,37 @@ private fun RigaSpesaDettaglio(spesa: Spesa, membri: List<Membro>) {
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text       = spesa.descrizione.ifBlank { "Spesa" },
+                    text       = personaNome,
                     style      = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
                     maxLines   = 1,
                     overflow   = TextOverflow.Ellipsis,
                 )
-                Spacer(Modifier.height(2.dp))
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment     = Alignment.CenterVertically,
-                ) {
+                if (entrata.note.isNotBlank()) {
+                    Spacer(Modifier.height(2.dp))
                     Text(
-                        text  = "$dataLabel · $paganteNome",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    if (!spesa.condivisa) {
-                        SuggestionChip(
-                            onClick = {},
-                            label   = { Text("Personale", style = MaterialTheme.typography.labelSmall) },
-                            colors  = SuggestionChipDefaults.suggestionChipColors(
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f),
-                            ),
-                            modifier = Modifier.height(18.dp),
-                        )
-                    }
-                }
-                if (spesa.note.isNotBlank()) {
-                    Text(
-                        text  = spesa.note,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        text     = entrata.note,
+                        style    = MaterialTheme.typography.bodySmall,
+                        color    = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }
             Spacer(Modifier.width(12.dp))
             Text(
-                text       = fmt.format(spesa.importo),
+                text       = fmt.format(entrata.importo),
                 style      = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
+                color      = Color(0xFF2E7D32),
             )
         }
     }
 }
 
 @Composable
-private fun CardPagante(pagante: AnalisiMeseViewModel.PaganteAnalisi) {
-    val colore = colorePagante(pagante.coloreIdx)
+private fun CardPersona(persona: AnalisiEntrateViewModel.PersonaAnalisi) {
+    val colore = colorePersona(persona.coloreIdx)
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
@@ -361,9 +313,14 @@ private fun CardPagante(pagante: AnalisiMeseViewModel.PaganteAnalisi) {
             ) {
                 Box(Modifier.size(12.dp).clip(CircleShape).background(colore))
                 Spacer(Modifier.width(10.dp))
-                Text(pagante.nome, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
                 Text(
-                    text       = NumberFormat.getCurrencyInstance(Locale.ITALY).format(pagante.totale),
+                    persona.nome,
+                    style      = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                    modifier   = Modifier.weight(1f),
+                )
+                Text(
+                    text       = NumberFormat.getCurrencyInstance(Locale.ITALY).format(persona.totale),
                     style      = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold,
                     color      = colore,
@@ -371,14 +328,14 @@ private fun CardPagante(pagante: AnalisiMeseViewModel.PaganteAnalisi) {
             }
             Spacer(Modifier.height(8.dp))
             LinearProgressIndicator(
-                progress   = { pagante.percentualeBar },
+                progress   = { persona.percentualeBar },
                 modifier   = Modifier.fillMaxWidth(),
                 color      = colore,
                 trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                text  = "${pagante.nSpese} ${if (pagante.nSpese == 1) "spesa" else "spese"}  ·  ${(pagante.percentualeBar * 100).toInt()}% del tot. spese",
+                text  = "${persona.nEntrate} ${if (persona.nEntrate == 1) "entrata" else "entrate"}  ·  ${(persona.percentualeBar * 100).toInt()}% del tot.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

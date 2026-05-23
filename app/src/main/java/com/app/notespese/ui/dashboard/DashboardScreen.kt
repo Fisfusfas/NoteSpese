@@ -73,6 +73,7 @@ fun DashboardScreen(
     onApriDebiti: (String) -> Unit,
     onApriImpostazioni: (String) -> Unit,
     onApriAnalisi: (gruppoId: String, mese: Int, anno: Int) -> Unit,
+    onApriAnalisiEntrate: (gruppoId: String, mese: Int, anno: Int) -> Unit,
     viewModel: DashboardViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -90,16 +91,17 @@ fun DashboardScreen(
         }
         is DashboardViewModel.UiState.Successo -> {
             DashboardContent(
-                state              = state,
-                onNavigateBack     = onNavigateBack,
-                onApriSpese        = { onApriSpese(gruppoId) },
-                onApriEntrate      = { onApriEntrate(gruppoId) },
-                onApriSaldi        = { onApriSaldi(gruppoId) },
-                onApriDebiti       = { onApriDebiti(gruppoId) },
-                onApriImpostazioni = { onApriImpostazioni(gruppoId) },
-                onApriAnalisi      = { onApriAnalisi(gruppoId, state.mese, state.anno) },
-                onMesePrecedente   = viewModel::mesePrecedente,
-                onMeseSuccessivo   = viewModel::meseSuccessivo,
+                state                = state,
+                onNavigateBack       = onNavigateBack,
+                onApriSpese          = { onApriSpese(gruppoId) },
+                onApriEntrate        = { onApriEntrate(gruppoId) },
+                onApriSaldi          = { onApriSaldi(gruppoId) },
+                onApriDebiti         = { onApriDebiti(gruppoId) },
+                onApriImpostazioni   = { onApriImpostazioni(gruppoId) },
+                onApriAnalisi        = { onApriAnalisi(gruppoId, state.mese, state.anno) },
+                onApriAnalisiEntrate = { onApriAnalisiEntrate(gruppoId, state.mese, state.anno) },
+                onMesePrecedente     = viewModel::mesePrecedente,
+                onMeseSuccessivo     = viewModel::meseSuccessivo,
             )
         }
     }
@@ -111,6 +113,7 @@ private fun DashboardContent(
     state: DashboardViewModel.UiState.Successo,
     onNavigateBack: () -> Unit,
     onApriSpese: () -> Unit,
+    onApriAnalisiEntrate: () -> Unit,
     onApriEntrate: () -> Unit,
     onApriSaldi: () -> Unit,
     onApriDebiti: () -> Unit,
@@ -119,9 +122,10 @@ private fun DashboardContent(
     onMesePrecedente: () -> Unit,
     onMeseSuccessivo: () -> Unit,
 ) {
-    val gruppoColore = parseColore(state.gruppo.colore)
-    val gruppoIcona  = iconaPerNome(state.gruppo.icona)
-    val totaleSpese  = state.speseDelMese.sumOf { it.importo }
+    val gruppoColore  = parseColore(state.gruppo.colore)
+    val gruppoIcona   = iconaPerNome(state.gruppo.icona)
+    val totaleSpese   = state.speseDelMese.sumOf { it.importo }
+    val totaleEntrate = state.entrateDelMese.sumOf { it.importo }
 
     Scaffold(
         topBar = {
@@ -200,10 +204,11 @@ private fun DashboardContent(
                     )
                     CardRiepilogo(
                         modifier    = Modifier.weight(1f),
-                        label       = "Operazioni",
-                        valore      = "${state.speseDelMese.size}",
-                        icona       = Icons.Default.Receipt,
-                        coloreIcona = MaterialTheme.colorScheme.tertiary,
+                        label       = "Entrate del mese",
+                        valore      = formatEuro(totaleEntrate),
+                        icona       = Icons.Default.TrendingUp,
+                        coloreIcona = Color(0xFF2E7D32),
+                        onClick     = onApriAnalisiEntrate,
                     )
                 }
                 Spacer(Modifier.height(12.dp))
@@ -215,12 +220,18 @@ private fun DashboardContent(
                 ) {
                     CardRiepilogo(
                         modifier    = Modifier.weight(1f),
+                        label       = "Operazioni",
+                        valore      = "${state.speseDelMese.size}",
+                        icona       = Icons.Default.Receipt,
+                        coloreIcona = MaterialTheme.colorScheme.tertiary,
+                    )
+                    CardRiepilogo(
+                        modifier    = Modifier.weight(1f),
                         label       = "Membri",
                         valore      = "${state.membri.size}",
                         icona       = Icons.Default.Group,
                         coloreIcona = MaterialTheme.colorScheme.secondary,
                     )
-                    Spacer(Modifier.weight(1f))
                 }
                 Spacer(Modifier.height(16.dp))
             }
