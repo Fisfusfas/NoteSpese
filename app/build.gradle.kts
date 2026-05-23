@@ -23,6 +23,19 @@ android {
         vectorDrawables { useSupportLibrary = true }
     }
 
+    signingConfigs {
+        // Keystore stabile condiviso tra CI e sviluppo locale.
+        // SHA-1: 1C:82:32:0E:23:B9:AB:41:4C:9D:AD:FA:F7:4F:36:49:34:31:79:A2
+        // SHA-256: 96:D9:32:3B:F1:71:F3:DB:BE:13:97:52:F8:DF:98:03:DF:15:00:6C:E2:8E:BE:63:F7:3D:45:B4:FA:67:12:73
+        // Registra entrambi su Firebase Console > Project Settings > Android app.
+        getByName("debug") {
+            storeFile     = file("debug.keystore")
+            storePassword = "android"
+            keyAlias      = "androiddebugkey"
+            keyPassword   = "android"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled   = true
@@ -35,6 +48,7 @@ android {
         debug {
             isDebuggable      = true
             versionNameSuffix = "-debug"
+            signingConfig     = signingConfigs.getByName("debug")
         }
     }
 

@@ -25,6 +25,16 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
+      - name: Show keystore SHA-1 (for Firebase Console)
+        run: |
+          echo "### Keystore fingerprints (debug.keystore)" >> $GITHUB_STEP_SUMMARY
+          keytool -list -v \
+            -keystore app/debug.keystore \
+            -alias androiddebugkey \
+            -storepass android \
+            -keypass android 2>/dev/null \
+            | grep -E "SHA1|SHA256" >> $GITHUB_STEP_SUMMARY
+
       - name: Build debug APK
         run: ./gradlew assembleDebug --no-daemon
 
