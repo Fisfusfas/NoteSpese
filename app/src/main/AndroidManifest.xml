@@ -41,6 +41,13 @@
                 tools:node="remove" />
         </provider>
 
+        <!-- Quick-entry activity per il widget -->
+        <activity
+            android:name=".ui.quick.QuickSpesaActivity"
+            android:exported="false"
+            android:theme="@style/Theme.NoteSpese"
+            android:windowSoftInputMode="adjustResize" />
+
         <!-- Widget riepilogo mensile -->
         <receiver
             android:name=".widget.SpeseWidgetReceiver"
@@ -51,6 +58,18 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/appwidget_provider" />
+        </receiver>
+
+        <!-- Widget inserimento rapido spesa -->
+        <receiver
+            android:name=".widget.QuickSpesaWidgetReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/quick_spesa_widget_provider" />
         </receiver>
 
     </application>

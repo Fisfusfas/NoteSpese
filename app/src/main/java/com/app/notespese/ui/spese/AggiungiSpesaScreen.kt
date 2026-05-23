@@ -23,7 +23,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -178,22 +177,23 @@ fun AggiungiSpesaScreen(
             }
 
             // ── Tipo ───────────────────────────────────────────────────────────
-            Column {
-                Text(
-                    text  = "Tipo",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.height(4.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TipoSpesa.entries.forEach { t ->
-                        FilterChip(
-                            selected = viewModel.tipo == t,
-                            onClick  = { viewModel.tipo = t },
-                            label    = { Text(t.name.lowercase().replaceFirstChar { it.uppercase() }) },
-                        )
-                    }
+            Row(
+                modifier              = Modifier.fillMaxWidth(),
+                verticalAlignment     = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column {
+                    Text("Spesa fissa", style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        text  = "Bolletta, affitto, abbonamento…",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
+                Switch(
+                    checked         = viewModel.tipo == TipoSpesa.FISSA,
+                    onCheckedChange = { viewModel.tipo = if (it) TipoSpesa.FISSA else TipoSpesa.VARIABILE },
+                )
             }
 
             // ── Data ───────────────────────────────────────────────────────────

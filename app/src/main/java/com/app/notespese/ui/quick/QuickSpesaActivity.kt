@@ -1,19 +1,22 @@
-package com.app.notespese.ui.ricorrenze
+package com.app.notespese.ui.quick
 
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
@@ -41,39 +44,52 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.app.notespese.data.model.TipoSpesa
 import com.app.notespese.ui.common.CategoriaSelector
+import com.app.notespese.ui.theme.NoteSpeseTema
+import dagger.hilt.android.AndroidEntryPoint
+
+@AndroidEntryPoint
+class QuickSpesaActivity : ComponentActivity() {
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        setContent {
+            NoteSpeseTema {
+                val viewModel: QuickSpesaViewModel = hiltViewModel()
+                LaunchedEffect(viewModel.esito) {
+                    if (viewModel.esito is QuickSpesaViewModel.Esito.Salvato) finish()
+                }
+                QuickSpesaContent(viewModel = viewModel, onClose = ::finish)
+            }
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AggiungiRicorrenzaScreen(
-    onNavigateBack: () -> Unit,
-    viewModel: AggiungiRicorrenzaViewModel = hiltViewModel(),
+private fun QuickSpesaContent(
+    viewModel: QuickSpesaViewModel,
+    onClose: () -> Unit,
 ) {
-    val esito = viewModel.esito
-    LaunchedEffect(esito) {
-        if (esito is AggiungiRicorrenzaViewModel.Esito.Salvato) onNavigateBack()
-    }
-
     val categorie by viewModel.categorie.collectAsStateWithLifecycle()
     val membri    by viewModel.membri.collectAsStateWithLifecycle()
-    var dropdownExpanded by remember { mutableStateOf(false) }
+    var paganteExpanded by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title          = { Text(if (viewModel.isModifica) "Modifica ricorrenza" else "Nuova ricorrenza") },
+                title          = { Text("Aggiungi spesa") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
+                    IconButton(onClick = onClose) {
+                        Icon(Icons.Default.Close, contentDescription = "Chiudi")
                     }
                 },
             )
-        },
+        }
     ) { innerPadding ->
         Column(
             modifier = Modifier
-                .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -83,7 +99,7 @@ fun AggiungiRicorrenzaScreen(
             OutlinedTextField(
                 value           = viewModel.importoText,
                 onValueChange   = { viewModel.importoText = it; viewModel.erroreImporto = false },
-                label           = { Text("Importo mensile *") },
+                label           = { Text("Importo *") },
                 prefix          = { Text("€") },
                 singleLine      = true,
                 isError         = viewModel.erroreImporto,
@@ -110,38 +126,53 @@ fun AggiungiRicorrenzaScreen(
             )
 
             // ── Chi paga ───────────────────────────────────────────────────────
-            if (membri.isNotEmpty()) {
+            if (membri.size > 1) {
                 ExposedDropdownMenuBox(
-                    expanded         = dropdownExpanded,
-                    onExpandedChange = { dropdownExpanded = it },
+                    expanded         = paganteExpanded,
+                    onExpandedChange = { paganteExpanded = it },
                 ) {
-                    val membroCorrente = membri.find { it.userId == viewModel.pagante }
-                    val label = membroCorrente?.nominativoLocale?.ifBlank { null }
-                        ?: membroCorrente?.userId?.take(10) ?: "Seleziona"
+                    val labelPagante = membri.find { it.userId == viewModel.pagante }
+                        ?.nominativoLocale?.ifBlank { null }
+                        ?: membri.find { it.userId == viewModel.pagante }?.userId?.take(10)
+                        ?: "Seleziona chi paga"
                     OutlinedTextField(
-                        value         = label,
+                        value         = labelPagante,
                         onValueChange = {},
                         readOnly      = true,
                         label         = { Text("Chi paga") },
-                        trailingIcon  = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownExpanded) },
+                        trailingIcon  = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = paganteExpanded) },
                         modifier      = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
                     )
                     ExposedDropdownMenu(
-                        expanded         = dropdownExpanded,
-                        onDismissRequest = { dropdownExpanded = false },
+                        expanded         = paganteExpanded,
+                        onDismissRequest = { paganteExpanded = false },
                     ) {
                         membri.forEach { membro ->
                             val nome = membro.nominativoLocale.ifBlank { membro.userId.take(10) }
                             DropdownMenuItem(
                                 text    = { Text(nome) },
-                                onClick = { viewModel.pagante = membro.userId; dropdownExpanded = false },
+                                onClick = { viewModel.pagante = membro.userId; paganteExpanded = false },
                             )
                         }
                     }
                 }
             }
 
-            // ── Tipo ───────────────────────────────────────────────────────────
+            // ── Condivisa ──────────────────────────────────────────────────────
+            Row(
+                modifier              = Modifier.fillMaxWidth(),
+                verticalAlignment     = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column {
+                    Text("Spesa condivisa", style = MaterialTheme.typography.bodyLarge)
+                    Text("Verrà divisa tra i membri", style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Switch(checked = viewModel.condivisa, onCheckedChange = { viewModel.condivisa = it })
+            }
+
+            // ── Tipo fissa ─────────────────────────────────────────────────────
             Row(
                 modifier              = Modifier.fillMaxWidth(),
                 verticalAlignment     = Alignment.CenterVertically,
@@ -149,58 +180,28 @@ fun AggiungiRicorrenzaScreen(
             ) {
                 Column {
                     Text("Spesa fissa", style = MaterialTheme.typography.bodyLarge)
-                    Text(
-                        text  = "Bolletta, affitto, abbonamento…",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Switch(
-                    checked         = viewModel.tipo == TipoSpesa.FISSA.name,
-                    onCheckedChange = { viewModel.tipo = if (it) TipoSpesa.FISSA.name else TipoSpesa.VARIABILE.name },
-                )
-            }
-
-            // ── Condivisa ──────────────────────────────────────────────────────
-            Row(
-                modifier          = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Column {
-                    Text("Spesa condivisa", style = MaterialTheme.typography.bodyLarge)
-                    Text("Inclusa nel calcolo saldi", style = MaterialTheme.typography.bodySmall,
+                    Text("Bolletta, affitto, abbonamento…", style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                Switch(checked = viewModel.condivisa, onCheckedChange = { viewModel.condivisa = it })
+                Switch(checked = viewModel.tipoFissa, onCheckedChange = { viewModel.tipoFissa = it })
             }
-
-            // ── Giorno del mese ────────────────────────────────────────────────
-            OutlinedTextField(
-                value           = viewModel.giornoDelMese,
-                onValueChange   = { if (it.length <= 2) viewModel.giornoDelMese = it.filter { c -> c.isDigit() } },
-                label           = { Text("Giorno del mese (1-31)") },
-                singleLine      = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier        = Modifier.fillMaxWidth(),
-            )
 
             // ── Salva ──────────────────────────────────────────────────────────
             Button(
                 onClick  = viewModel::salva,
-                enabled  = esito !is AggiungiRicorrenzaViewModel.Esito.Caricamento,
+                enabled  = viewModel.esito !is QuickSpesaViewModel.Esito.Caricamento,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
             ) {
-                if (esito is AggiungiRicorrenzaViewModel.Esito.Caricamento) {
-                    CircularProgressIndicator(modifier = Modifier.height(20.dp), strokeWidth = 2.dp)
+                if (viewModel.esito is QuickSpesaViewModel.Esito.Caricamento) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                 } else {
-                    Text(if (viewModel.isModifica) "Aggiorna" else "Salva ricorrenza")
+                    Text("Salva spesa")
                 }
             }
 
-            if (esito is AggiungiRicorrenzaViewModel.Esito.Errore) {
+            if (viewModel.esito is QuickSpesaViewModel.Esito.Errore) {
                 Text(
-                    text  = (esito as AggiungiRicorrenzaViewModel.Esito.Errore).msg,
+                    text  = (viewModel.esito as QuickSpesaViewModel.Esito.Errore).msg,
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall,
                 )
