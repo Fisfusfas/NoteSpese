@@ -1,6 +1,7 @@
 package com.app.notespese.widget
 
 import android.content.Context
+import android.content.Intent
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -8,9 +9,9 @@ import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
-import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.layout.Alignment
@@ -29,6 +30,7 @@ import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.app.notespese.MainActivity
 import com.app.notespese.data.model.Spesa
+import com.app.notespese.ui.quick.QuickSpesaActivity
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
@@ -43,7 +45,7 @@ class SpeseWidget : GlanceAppWidget() {
         val data = fetchData()
         provideContent {
             GlanceTheme {
-                WidgetContent(data)
+                WidgetContent(context, data)
             }
         }
     }
@@ -82,6 +84,7 @@ class SpeseWidget : GlanceAppWidget() {
                 .map { SpesaRecente(it.descrizione.ifBlank { "Spesa" }, it.importo) }
 
             WidgetData(
+                gruppoId      = gruppoId,
                 nomeGruppo    = nomeGruppo,
                 mese          = now.month.getDisplayName(java.time.format.TextStyle.FULL, Locale.ITALIAN)
                     .replaceFirstChar { it.uppercase() } + " ${anno}",
@@ -99,6 +102,7 @@ class SpeseWidget : GlanceAppWidget() {
 data class SpesaRecente(val descrizione: String, val importo: Double)
 
 data class WidgetData(
+    val gruppoId: String            = "",
     val nomeGruppo: String          = "",
     val mese: String                = "",
     val totaleSpese: Double         = 0.0,
@@ -108,7 +112,7 @@ data class WidgetData(
 )
 
 @Composable
-private fun WidgetContent(data: WidgetData) {
+private fun WidgetContent(context: Context, data: WidgetData) {
     val fmt      = NumberFormat.getCurrencyInstance(Locale.ITALY)
     val rosso    = Color(0xFFB71C1C)
     val verde    = Color(0xFF1B5E20)
@@ -116,6 +120,14 @@ private fun WidgetContent(data: WidgetData) {
     val hint     = Color(0xFF757575)
     val divider  = Color(0xFFE0E0E0)
     val primary  = Color(0xFF1565C0)
+    val onPrimary = Color.White
+
+    val mainIntent = if (data.gruppoId.isNotEmpty()) {
+        Intent(context, QuickSpesaActivity::class.java).apply {
+            putExtra("gruppoId", data.gruppoId)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+    } else null
 
     Column(
         modifier = GlanceModifier
@@ -214,6 +226,32 @@ private fun WidgetContent(data: WidgetData) {
                         style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Medium, color = ColorProvider(rosso)),
                     )
                 }
+            }
+        }
+
+        Spacer(GlanceModifier.defaultWeight())
+
+        // ── Aggiungi spesa button ────────────────────────────────────────────
+        val btnAction = if (mainIntent != null) actionStartActivity(mainIntent)
+                        else actionStartActivity<MainActivity>()
+        Box(
+            modifier         = GlanceModifier
+                .fillMaxWidth()
+                .background(primary)
+                .clickable(btnAction)
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text  = "+",
+                    style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Bold, color = ColorProvider(onPrimary)),
+                )
+                Spacer(GlanceModifier.width(6.dp))
+                Text(
+                    text  = "Aggiungi spesa",
+                    style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Medium, color = ColorProvider(onPrimary)),
+                )
             }
         }
     }
