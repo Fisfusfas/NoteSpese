@@ -14,6 +14,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
@@ -21,6 +24,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -32,8 +36,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -42,13 +49,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.app.notespese.data.model.Membro
+import com.app.notespese.data.model.ModalitaSplit
 import com.app.notespese.data.model.Saldo
 import com.app.notespese.data.model.StatoDebitore
 import java.text.NumberFormat
@@ -63,6 +73,22 @@ fun SaldoScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    // Dialog is shown on top regardless of load state
+    if (viewModel.showSplitDialog) {
+        val state = uiState as? SaldoViewModel.UiState.Successo
+        if (state != null) {
+            SplitConfigDialog(
+                modalita        = viewModel.splitModalita,
+                onModalitaChange = { viewModel.splitModalita = it },
+                pesi            = viewModel.splitPesi,
+                onPesoChange    = { uid, v -> viewModel.splitPesi = viewModel.splitPesi + (uid to v) },
+                membri          = state.membri,
+                onDismiss       = viewModel::chiudiDialogSplit,
+                onConferma      = viewModel::salvaSplit,
+            )
+        }
+    }
+
     when (val state = uiState) {
         is SaldoViewModel.UiState.Caricamento -> {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
@@ -73,19 +99,19 @@ fun SaldoScreen(
             }
         }
         is SaldoViewModel.UiState.Successo -> {
-            // Auto-ricalcola quando si apre la schermata o si cambia mese
             LaunchedEffect(state.mese, state.anno) {
                 viewModel.calcolaESalva()
             }
             SaldoContent(
-                state            = state,
-                azioneEsito      = viewModel.azioneEsito,
-                onNavigateBack   = onNavigateBack,
-                onCalcola        = viewModel::calcolaESalva,
-                onSegnaComePagato  = viewModel::segnaComePagato,
+                state               = state,
+                azioneEsito         = viewModel.azioneEsito,
+                onNavigateBack      = onNavigateBack,
+                onCalcola           = viewModel::calcolaESalva,
+                onApriSplitDialog   = viewModel::apriFialogSplit,
+                onSegnaComePagato   = viewModel::segnaComePagato,
                 onConfermaPagamento = viewModel::confermaPagamento,
-                onMesePrecedente = viewModel::mesePrecedente,
-                onMeseSuccessivo = viewModel::meseSuccessivo,
+                onMesePrecedente    = viewModel::mesePrecedente,
+                onMeseSuccessivo    = viewModel::meseSuccessivo,
             )
         }
     }
@@ -98,6 +124,7 @@ private fun SaldoContent(
     azioneEsito: SaldoViewModel.AzioneEsito,
     onNavigateBack: () -> Unit,
     onCalcola: () -> Unit,
+    onApriSplitDialog: () -> Unit,
     onSegnaComePagato: (String) -> Unit,
     onConfermaPagamento: (String) -> Unit,
     onMesePrecedente: () -> Unit,
@@ -145,7 +172,7 @@ private fun SaldoContent(
                 }
             }
 
-            // ── Bottone calcola ───────────────────────────────────────────────
+            // ── Bottone calcola + config suddivisione ─────────────────────────
             item {
                 ElevatedButton(
                     onClick  = onCalcola,
@@ -169,7 +196,27 @@ private fun SaldoContent(
                         modifier = Modifier.padding(horizontal = 16.dp),
                     )
                 }
-                Spacer(Modifier.height(8.dp))
+
+                // Suddivisione row
+                val splitLabel = when (state.meseConfig?.modalitaSplit) {
+                    ModalitaSplit.CINQUANTA.name     -> "Equa (50/50)"
+                    ModalitaSplit.COEFFICIENTE.name  -> "Coefficienti"
+                    ModalitaSplit.PERSONALIZZATO.name -> "Percentuali fisse"
+                    else                             -> "Equa (predefinita)"
+                }
+                Row(
+                    modifier              = Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp),
+                    verticalAlignment     = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        text  = "Suddivisione: $splitLabel",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    TextButton(onClick = onApriSplitDialog) { Text("Modifica") }
+                }
+
                 HorizontalDivider()
             }
 
@@ -234,6 +281,80 @@ private fun SaldoContent(
     }
 }
 
+// ── Dialog configurazione suddivisione ────────────────────────────────────────
+
+@Composable
+private fun SplitConfigDialog(
+    modalita: ModalitaSplit,
+    onModalitaChange: (ModalitaSplit) -> Unit,
+    pesi: Map<String, String>,
+    onPesoChange: (String, String) -> Unit,
+    membri: List<Membro>,
+    onDismiss: () -> Unit,
+    onConferma: () -> Unit,
+) {
+    val opzioni = listOf(
+        Triple(ModalitaSplit.CINQUANTA,     "Equa (50/50)",         "Ogni spesa condivisa è divisa in parti uguali"),
+        Triple(ModalitaSplit.COEFFICIENTE,  "Coefficienti",         "Le spese si dividono in base ai pesi (es. 1:2 per rapporto redditi)"),
+        Triple(ModalitaSplit.PERSONALIZZATO,"Percentuali fisse",    "Inserisci la percentuale (es. 30 e 70, devono sommare 100)"),
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title   = { Text("Modalità di suddivisione") },
+        text    = {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Column(modifier = Modifier.selectableGroup()) {
+                    opzioni.forEach { (modo, etichetta, descrizione) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .selectable(
+                                    selected = modalita == modo,
+                                    onClick  = { onModalitaChange(modo) },
+                                    role     = Role.RadioButton,
+                                )
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.Top,
+                        ) {
+                            RadioButton(selected = modalita == modo, onClick = null)
+                            Spacer(Modifier.width(8.dp))
+                            Column {
+                                Text(etichetta, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                                Text(descrizione, style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
+
+                if (modalita != ModalitaSplit.CINQUANTA) {
+                    Spacer(Modifier.height(8.dp))
+                    val hint = if (modalita == ModalitaSplit.PERSONALIZZATO) "Percentuale (%)" else "Peso (es. 1, 2)"
+                    membri.forEach { membro ->
+                        val nome = membro.nominativoLocale.ifBlank { membro.userId.take(8) }
+                        OutlinedTextField(
+                            value         = pesi[membro.userId] ?: "1",
+                            onValueChange = { v -> onPesoChange(membro.userId, v) },
+                            label         = { Text(nome) },
+                            placeholder   = { Text(hint) },
+                            singleLine    = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            modifier      = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = onConferma) { Text("Salva e ricalcola") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Annulla") }
+        },
+    )
+}
+
 // ── Card saldo ─────────────────────────────────────────────────────────────────
 
 @Composable
@@ -264,7 +385,6 @@ private fun CardSaldo(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
 
-            // Riga importo + freccia
             Row(
                 modifier          = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -290,7 +410,6 @@ private fun CardSaldo(
                 )
             }
 
-            // Stato
             Spacer(Modifier.height(4.dp))
             val statoTesto = when {
                 saldo.isSaldato                                          -> "Saldato"
@@ -307,7 +426,6 @@ private fun CardSaldo(
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
 
-            // Azioni contestuali
             if (!saldo.isSaldato) {
                 Spacer(Modifier.height(8.dp))
                 when {

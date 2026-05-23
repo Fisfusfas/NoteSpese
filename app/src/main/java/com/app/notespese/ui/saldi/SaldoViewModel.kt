@@ -6,7 +6,9 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.app.notespese.data.model.MeseConfig
 import com.app.notespese.data.model.Membro
+import com.app.notespese.data.model.ModalitaSplit
 import com.app.notespese.data.model.Saldo
 import com.app.notespese.data.repository.AuthRepository
 import com.app.notespese.data.repository.GruppoRepository
@@ -42,6 +44,7 @@ class SaldoViewModel @Inject constructor(
             val mese: Int,
             val anno: Int,
             val userId: String,
+            val meseConfig: MeseConfig?,
         ) : UiState
         data class Errore(val messaggio: String) : UiState
     }
@@ -57,6 +60,11 @@ class SaldoViewModel @Inject constructor(
 
     var azioneEsito by mutableStateOf<AzioneEsito>(AzioneEsito.Inattivo)
 
+    // ── Dialog split ───────────────────────────────────────────────────────────
+    var showSplitDialog by mutableStateOf(false)
+    var splitModalita   by mutableStateOf(ModalitaSplit.CINQUANTA)
+    var splitPesi       by mutableStateOf<Map<String, String>>(emptyMap())
+
     val uiState: StateFlow<UiState> = _meseAnno
         .flatMapLatest { (mese, anno) ->
             val meseId = "%04d-%02d".format(anno, mese)
@@ -65,7 +73,8 @@ class SaldoViewModel @Inject constructor(
                 gruppoRepository.osservaMembri(gruppoId),
                 saldoRepository.osservaSaldi(gruppoId, meseId),
                 authRepository.utenteCorrente,
-            ) { gruppo, membri, saldi, utente ->
+                saldoRepository.osservaMeseConfig(gruppoId, meseId),
+            ) { gruppo, membri, saldi, utente, meseConfig ->
                 if (gruppo == null) UiState.Errore("Gruppo non trovato")
                 else UiState.Successo(
                     nomeGruppo = gruppo.nome,
@@ -74,6 +83,7 @@ class SaldoViewModel @Inject constructor(
                     mese       = mese,
                     anno       = anno,
                     userId     = utente?.id ?: "",
+                    meseConfig = meseConfig,
                 )
             }
         }
@@ -108,6 +118,35 @@ class SaldoViewModel @Inject constructor(
         }
     }
 
+    fun apriFialogSplit() {
+        val state  = uiState.value as? UiState.Successo ?: return
+        val config = state.meseConfig
+        splitModalita = ModalitaSplit.entries.find { it.name == config?.modalitaSplit }
+            ?: ModalitaSplit.CINQUANTA
+        splitPesi = state.membri.associate { m ->
+            val peso = config?.splitPersonalizzato?.get(m.userId) ?: 1.0
+            m.userId to formatPeso(peso)
+        }
+        showSplitDialog = true
+    }
+
+    fun chiudiDialogSplit() { showSplitDialog = false }
+
+    fun salvaSplit() {
+        val state  = uiState.value as? UiState.Successo ?: return
+        val meseId = "%04d-%02d".format(state.anno, state.mese)
+        val pesi   = if (splitModalita == ModalitaSplit.CINQUANTA) emptyMap()
+                     else splitPesi.mapValues { it.value.toDoubleOrNull() ?: 1.0 }
+        showSplitDialog = false
+        viewModelScope.launch {
+            azioneEsito = AzioneEsito.Caricamento
+            saldoRepository.impostaSplit(gruppoId, meseId, splitModalita, pesi).fold(
+                onSuccess = { calcolaESalva() },
+                onFailure = { azioneEsito = AzioneEsito.Errore(it.message ?: "Errore nel salvataggio") },
+            )
+        }
+    }
+
     fun segnaComePagato(saldoId: String) {
         val state  = uiState.value as? UiState.Successo ?: return
         val meseId = "%04d-%02d".format(state.anno, state.mese)
@@ -131,4 +170,7 @@ class SaldoViewModel @Inject constructor(
             )
         }
     }
+
+    private fun formatPeso(v: Double): String =
+        if (v == kotlin.math.floor(v) && !v.isInfinite()) v.toLong().toString() else v.toString()
 }

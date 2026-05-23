@@ -2,6 +2,7 @@ package com.app.notespese.data.repository
 
 import com.app.notespese.data.model.MeseConfig
 import com.app.notespese.data.model.Membro
+import com.app.notespese.data.model.ModalitaSplit
 import com.app.notespese.data.model.Saldo
 import com.app.notespese.data.model.Spesa
 import com.app.notespese.data.model.StatoCreditore
@@ -34,6 +35,27 @@ class FirebaseSaldoRepository @Inject constructor(
                 trySend(snapshot?.toObjects(Saldo::class.java) ?: emptyList())
             }
         awaitClose { listener.remove() }
+    }
+
+    override fun osservaMeseConfig(gruppoId: String, meseId: String): Flow<MeseConfig?> = callbackFlow {
+        val ref = gruppoRef(gruppoId).collection("mesi").document(meseId)
+        val listener = ref.addSnapshotListener { snap, error ->
+            if (error != null) { close(error); return@addSnapshotListener }
+            trySend(snap?.toObject(MeseConfig::class.java))
+        }
+        awaitClose { listener.remove() }
+    }
+
+    override suspend fun impostaSplit(
+        gruppoId: String,
+        meseId: String,
+        modalita: ModalitaSplit,
+        pesi: Map<String, Double>,
+    ): Result<Unit> = runCatching {
+        val ref  = gruppoRef(gruppoId).collection("mesi").document(meseId)
+        val snap = ref.get().await()
+        val base = snap.toObject(MeseConfig::class.java) ?: MeseConfig(id = meseId)
+        ref.set(base.copy(modalitaSplit = modalita.name, splitPersonalizzato = pesi)).await()
     }
 
     override suspend fun calcolaESalvaSaldi(gruppoId: String, meseId: String): Result<Unit> = runCatching {
