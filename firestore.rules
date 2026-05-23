@@ -6,28 +6,22 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Verifica che l'utente sia membro del gruppo (legge membroIds dal documento)
     function isMembro(gruppoId) {
       return autenticato() &&
         request.auth.uid in get(/databases/$(database)/documents/gruppi/$(gruppoId))
           .data.get('membroIds', []);
     }
 
-    // ── Profili utente ─────────────────────────────────────────────────────────
     match /users/{userId} {
       allow read, write: if autenticato() && request.auth.uid == userId;
     }
 
-    // ── Gruppi ─────────────────────────────────────────────────────────────────
     match /gruppi/{gruppoId} {
-
       allow read: if isMembro(gruppoId);
 
-      // Creazione: utente autenticato (anche anonimo), deve essere in membroIds
       allow create: if autenticato() &&
         request.auth.uid in request.resource.data.get('membroIds', []);
 
-      // Modifica: membro esistente, OPPURE utente che si aggiunge (accetta invito)
       allow update: if isMembro(gruppoId) || (
         autenticato() &&
         request.auth.uid in request.resource.data.get('membroIds', [])
@@ -35,35 +29,25 @@ service cloud.firestore {
 
       allow delete: if isMembro(gruppoId);
 
-      // ── Sottocollezione membri ───────────────────────────────────────────────
       match /membri/{membroId} {
         allow read: if isMembro(gruppoId);
-        // Scrittura: membro del gruppo, OPPURE utente che crea il proprio doc
-        // (batch atomico alla creazione del gruppo: il doc gruppo e membro vengono
-        //  scritti insieme, isMembro() non può ancora vedere il nuovo documento)
         allow write: if autenticato() && (
           isMembro(gruppoId) || request.auth.uid == membroId
         );
       }
 
-      // ── Spese, entrate, categorie, debiti, ricorrenze, budget ────────────────
       match /{subcollection}/{document} {
         allow read, write: if isMembro(gruppoId);
       }
 
-      // ── Mesi (e sottocollezione saldi) ───────────────────────────────────────
       match /mesi/{meseId} {
         allow read, write: if isMembro(gruppoId);
-
         match /saldi/{saldoId} {
           allow read, write: if isMembro(gruppoId);
         }
       }
     }
 
-    // ── Inviti ─────────────────────────────────────────────────────────────────
-    // Leggibili da tutti gli autenticati (serve per accettare l'invito con codice).
-    // Scrivibili da autenticati (creazione invito + accettazione).
     match /inviti/{invitoId} {
       allow read, write: if autenticato();
     }
