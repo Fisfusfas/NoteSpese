@@ -34,7 +34,7 @@ class QuickSpesaViewModel @Inject constructor(
     private val authRepository: AuthRepository,
 ) : ViewModel() {
 
-    val gruppoId: String = checkNotNull(savedStateHandle["gruppoId"])
+    val gruppoId: String = savedStateHandle["gruppoId"] ?: ""
 
     val categorie: StateFlow<List<Categoria>> = categoriaRepository.osservaCategorie(gruppoId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())

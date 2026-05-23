@@ -45,7 +45,7 @@
         <activity
             android:name=".ui.quick.QuickSpesaActivity"
             android:exported="false"
-            android:theme="@style/Theme.NoteSpese"
+            android:theme="@style/Theme.NoteSpese.BottomSheet"
             android:windowSoftInputMode="adjustResize" />
 
         <!-- Widget riepilogo mensile -->

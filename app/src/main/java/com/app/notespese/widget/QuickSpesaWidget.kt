@@ -23,12 +23,12 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
-import androidx.glance.layout.size
 import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
+import com.app.notespese.MainActivity
 import com.app.notespese.ui.quick.QuickSpesaActivity
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
@@ -78,69 +78,126 @@ private fun QuickWidgetContent(
     gruppoId: String,
     nomeGruppo: String,
 ) {
-    val surface    = Color(0xFFF5F5F5)
-    val primary    = Color(0xFF1565C0)
-    val onPrimary  = Color.White
-    val hint       = Color(0xFF757575)
+    val surface   = Color(0xFFF5F5F5)
+    val primary   = Color(0xFF1565C0)
+    val onPrimary = Color.White
+    val hint      = Color(0xFF757575)
+    val fieldBg   = Color(0xFFE8EAF6)
+    val fieldText = Color(0xFFBDBDBD)
+    val border    = Color(0xFFBBDEFB)
 
-    val addIntent  = Intent(context, QuickSpesaActivity::class.java).apply {
-        putExtra("gruppoId", gruppoId)
-        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-    }
+    val openIntent = if (gruppoId.isNotEmpty()) {
+        Intent(context, QuickSpesaActivity::class.java).apply {
+            putExtra("gruppoId", gruppoId)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+    } else null
+
+    val tapAction = if (openIntent != null) actionStartActivity(openIntent)
+    else actionStartActivity<MainActivity>()
 
     Column(
-        modifier          = GlanceModifier.fillMaxSize().background(surface).padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        modifier = GlanceModifier
+            .fillMaxSize()
+            .background(surface)
+            .clickable(tapAction)
+            .padding(16.dp),
     ) {
-        Text(
-            text  = "NoteSpese",
-            style = TextStyle(fontSize = 11.sp, color = ColorProvider(hint)),
-        )
-        if (nomeGruppo.isNotEmpty()) {
-            Text(
-                text     = nomeGruppo,
-                style    = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Bold),
-                modifier = GlanceModifier.padding(top = 2.dp, bottom = 8.dp),
-            )
-        } else {
-            Spacer(GlanceModifier.height(6.dp))
-        }
-
-        // ── Pulsante aggiungi spesa ────────────────────────────────────────────
-        Box(
-            modifier          = GlanceModifier
-                .fillMaxWidth()
-                .background(primary)
-                .clickable(if (gruppoId.isNotEmpty()) actionStartActivity(addIntent) else actionStartActivity<QuickSpesaActivity>())
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            contentAlignment  = Alignment.Center,
+        // ── Header ──────────────────────────────────────────────────────────
+        Row(
+            modifier          = GlanceModifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text  = "NoteSpese",
+                style = TextStyle(fontSize = 11.sp, color = ColorProvider(primary), fontWeight = FontWeight.Bold),
+                modifier = GlanceModifier.defaultWeight(),
+            )
+            if (nomeGruppo.isNotEmpty()) {
                 Text(
-                    text  = "+",
-                    style = TextStyle(
-                        fontSize   = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color      = ColorProvider(onPrimary),
-                    ),
-                )
-                Spacer(GlanceModifier.width(8.dp))
-                Text(
-                    text  = "Aggiungi spesa",
-                    style = TextStyle(
-                        fontSize   = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                        color      = ColorProvider(onPrimary),
-                    ),
+                    text  = nomeGruppo,
+                    style = TextStyle(fontSize = 11.sp, color = ColorProvider(hint)),
                 )
             }
         }
 
+        Text(
+            text     = "Aggiungi spesa",
+            style    = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.Bold),
+            modifier = GlanceModifier.padding(top = 4.dp, bottom = 14.dp),
+        )
+
         if (gruppoId.isEmpty()) {
-            Spacer(GlanceModifier.height(6.dp))
             Text(
                 text  = "Accedi all'app per configurare il widget",
-                style = TextStyle(fontSize = 10.sp, color = ColorProvider(hint)),
+                style = TextStyle(fontSize = 12.sp, color = ColorProvider(hint)),
+            )
+            return@Column
+        }
+
+        // ── Fake importo field ───────────────────────────────────────────────
+        FakeField(label = "Importo", placeholder = "€  0,00", primary = primary, fieldBg = fieldBg, border = border, fieldText = fieldText)
+
+        Spacer(GlanceModifier.height(10.dp))
+
+        // ── Fake descrizione field ───────────────────────────────────────────
+        FakeField(label = "Descrizione", placeholder = "Cosa hai acquistato?", primary = primary, fieldBg = fieldBg, border = border, fieldText = fieldText)
+
+        Spacer(GlanceModifier.height(10.dp))
+
+        // ── Fake categoria field ─────────────────────────────────────────────
+        FakeField(label = "Categoria", placeholder = "Seleziona categoria  ▾", primary = primary, fieldBg = fieldBg, border = border, fieldText = fieldText)
+
+        Spacer(GlanceModifier.height(14.dp))
+
+        // ── CTA button ──────────────────────────────────────────────────────
+        Box(
+            modifier         = GlanceModifier
+                .fillMaxWidth()
+                .background(primary)
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text  = "+",
+                    style = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.Bold, color = ColorProvider(onPrimary)),
+                )
+                Spacer(GlanceModifier.width(6.dp))
+                Text(
+                    text  = "Tocca per aggiungere",
+                    style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Medium, color = ColorProvider(onPrimary)),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FakeField(
+    label: String,
+    placeholder: String,
+    primary: Color,
+    fieldBg: Color,
+    border: Color,
+    fieldText: Color,
+) {
+    Column {
+        Text(
+            text     = label,
+            style    = TextStyle(fontSize = 11.sp, color = ColorProvider(primary), fontWeight = FontWeight.Medium),
+            modifier = GlanceModifier.padding(bottom = 4.dp),
+        )
+        Box(
+            modifier         = GlanceModifier
+                .fillMaxWidth()
+                .background(fieldBg)
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            contentAlignment = Alignment.CenterStart,
+        ) {
+            Text(
+                text  = placeholder,
+                style = TextStyle(fontSize = 14.sp, color = ColorProvider(fieldText)),
             )
         }
     }

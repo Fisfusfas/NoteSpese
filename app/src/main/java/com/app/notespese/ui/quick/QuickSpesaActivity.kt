@@ -3,16 +3,23 @@ package com.app.notespese.ui.quick
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -28,10 +35,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -40,8 +45,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.app.notespese.ui.common.CategoriaSelector
@@ -53,14 +60,14 @@ class QuickSpesaActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         setContent {
             NoteSpeseTema {
                 val viewModel: QuickSpesaViewModel = hiltViewModel()
                 LaunchedEffect(viewModel.esito) {
                     if (viewModel.esito is QuickSpesaViewModel.Esito.Salvato) finish()
                 }
-                QuickSpesaContent(viewModel = viewModel, onClose = ::finish)
+                QuickSpesaBottomSheet(viewModel = viewModel, onClose = ::finish)
             }
         }
     }
@@ -68,7 +75,7 @@ class QuickSpesaActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun QuickSpesaContent(
+private fun QuickSpesaBottomSheet(
     viewModel: QuickSpesaViewModel,
     onClose: () -> Unit,
 ) {
@@ -76,25 +83,56 @@ private fun QuickSpesaContent(
     val membri    by viewModel.membri.collectAsStateWithLifecycle()
     var paganteExpanded by remember { mutableStateOf(false) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title          = { Text("Aggiungi spesa") },
-                navigationIcon = {
-                    IconButton(onClick = onClose) {
-                        Icon(Icons.Default.Close, contentDescription = "Chiudi")
-                    }
-                },
-            )
-        }
-    ) { innerPadding ->
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Dimming overlay — tap to dismiss
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.45f))
+                .statusBarsPadding()
+                .clickable(onClick = onClose),
+        )
+
+        // Sheet content anchored to bottom
         Column(
             modifier = Modifier
-                .padding(innerPadding)
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter)
+                .background(
+                    color = MaterialTheme.colorScheme.surface,
+                    shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+                )
+                .navigationBarsPadding()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+                .padding(horizontal = 20.dp, vertical = 16.dp),
         ) {
+            // Drag handle
+            Box(
+                modifier = Modifier
+                    .width(40.dp)
+                    .height(4.dp)
+                    .align(Alignment.CenterHorizontally)
+                    .background(
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+                        shape = RoundedCornerShape(2.dp),
+                    ),
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            Row(
+                modifier              = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment     = Alignment.CenterVertically,
+            ) {
+                Text("Aggiungi spesa", style = MaterialTheme.typography.titleLarge)
+                IconButton(onClick = onClose) {
+                    Icon(Icons.Default.Close, contentDescription = "Chiudi")
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
             // ── Importo ────────────────────────────────────────────────────────
             OutlinedTextField(
                 value           = viewModel.importoText,
@@ -108,6 +146,8 @@ private fun QuickSpesaContent(
                 modifier        = Modifier.fillMaxWidth(),
             )
 
+            Spacer(Modifier.height(8.dp))
+
             // ── Descrizione ────────────────────────────────────────────────────
             OutlinedTextField(
                 value         = viewModel.descrizione,
@@ -117,6 +157,8 @@ private fun QuickSpesaContent(
                 modifier      = Modifier.fillMaxWidth(),
             )
 
+            Spacer(Modifier.height(8.dp))
+
             // ── Categoria ──────────────────────────────────────────────────────
             CategoriaSelector(
                 categorie              = categorie,
@@ -124,6 +166,8 @@ private fun QuickSpesaContent(
                 onSeleziona            = { viewModel.categoriaId = it },
                 onCreaCategoria        = { _, _ -> },
             )
+
+            Spacer(Modifier.height(8.dp))
 
             // ── Chi paga ───────────────────────────────────────────────────────
             if (membri.size > 1) {
@@ -133,7 +177,6 @@ private fun QuickSpesaContent(
                 ) {
                     val labelPagante = membri.find { it.userId == viewModel.pagante }
                         ?.nominativoLocale?.ifBlank { null }
-                        ?: membri.find { it.userId == viewModel.pagante }?.userId?.take(10)
                         ?: "Seleziona chi paga"
                     OutlinedTextField(
                         value         = labelPagante,
@@ -156,6 +199,7 @@ private fun QuickSpesaContent(
                         }
                     }
                 }
+                Spacer(Modifier.height(8.dp))
             }
 
             // ── Condivisa ──────────────────────────────────────────────────────
@@ -186,6 +230,8 @@ private fun QuickSpesaContent(
                 Switch(checked = viewModel.tipoFissa, onCheckedChange = { viewModel.tipoFissa = it })
             }
 
+            Spacer(Modifier.height(16.dp))
+
             // ── Salva ──────────────────────────────────────────────────────────
             Button(
                 onClick  = viewModel::salva,
@@ -200,6 +246,7 @@ private fun QuickSpesaContent(
             }
 
             if (viewModel.esito is QuickSpesaViewModel.Esito.Errore) {
+                Spacer(Modifier.height(8.dp))
                 Text(
                     text  = (viewModel.esito as QuickSpesaViewModel.Esito.Errore).msg,
                     color = MaterialTheme.colorScheme.error,
