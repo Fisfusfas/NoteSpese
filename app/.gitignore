@@ -1,1 +1,4 @@
 /build
+
+# Firebase — contiene API keys e config, non va su repo pubblici
+google-services.json
