@@ -62,7 +62,7 @@ class AnalisiMeseViewModel @Inject constructor(
                 )
             }
             .sortedByDescending { it.totale }
-        UiState.Successo(totale = totale, perCategoria = perCat)
+        UiState.Successo(totale = totale, perCategoria = perCat) as UiState
     }
     .catch { e -> emit(UiState.Errore(e.message ?: "Errore sconosciuto")) }
     .stateIn(
