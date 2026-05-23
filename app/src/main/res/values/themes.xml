@@ -1,0 +1,12 @@
+<resources>
+    <!--
+        Tema minimale per l'Activity: Compose gestisce tutto il design system.
+        Parent "NoTitleBar" evita la ActionBar nativa; la barra di stato viene
+        controllata da Compose tramite accompanist-systemuicontroller o
+        WindowCompat.setDecorFitsSystemWindows().
+    -->
+    <style name="Theme.NoteSpese" parent="android:Theme.NoTitleBar">
+        <item name="android:windowBackground">@color/bg_light</item>
+        <item name="android:windowIsTranslucent">false</item>
+    </style>
+</resources>

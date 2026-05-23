@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "857187949640",
+    "project_id": "notespese-8fb79",
+    "storage_bucket": "notespese-8fb79.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:857187949640:android:bcb2a6996bcf04454f4c7d",
+        "android_client_info": {
+          "package_name": "com.app.notespese"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "857187949640-r21fr148acj22cmbu2ghhevubgasfppv.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.app.notespese",
+            "certificate_hash": "3b2d9683bee0f5a18d2295956a9b165af5083fba"
+          }
+        },
+        {
+          "client_id": "857187949640-ejn02m112jqggg8rmf6fn7gau51jq1k0.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDDEMdP_rkondrBgae8dJ4Y5cq00Uj3n-I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "857187949640-ejn02m112jqggg8rmf6fn7gau51jq1k0.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

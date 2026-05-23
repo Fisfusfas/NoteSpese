@@ -1,0 +1,140 @@
+[versions]
+agp                   = "8.3.2"
+kotlin                = "2.0.21"
+ksp                   = "2.0.21-1.0.28"
+
+# AndroidX
+coreKtx               = "1.15.0"
+lifecycleRuntime      = "2.8.7"
+activityCompose       = "1.10.0"
+composeBom            = "2024.12.01"
+navigationCompose     = "2.8.5"
+room                  = "2.6.1"
+workManager           = "2.10.0"
+datastore             = "1.1.2"
+glance                = "1.1.1"
+
+# DI
+hilt                  = "2.53.1"
+hiltExtensions        = "1.2.0"
+
+# Firebase
+firebaseBom           = "33.7.0"
+
+# Credential Manager (Google Sign-In moderno, sostituisce GoogleSignInClient)
+credentialManager     = "1.3.0"
+googleId              = "1.1.1"
+
+# Kotlin
+coroutines            = "1.9.0"
+
+# Immagini
+coil                  = "2.7.0"
+
+# Export Excel
+poi                   = "5.2.3"
+xmlbeans              = "5.2.0"
+
+# OCR
+mlkitTextRecognition  = "16.0.1"
+
+# Test
+junit                 = "4.13.2"
+junitExt              = "1.2.1"
+espresso              = "3.6.1"
+
+
+[libraries]
+
+# ── AndroidX Core ─────────────────────────────────────────────────────────────
+androidx-core-ktx                    = { group = "androidx.core",      name = "core-ktx",                    version.ref = "coreKtx" }
+androidx-lifecycle-runtime-ktx       = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx",       version.ref = "lifecycleRuntime" }
+androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycleRuntime" }
+androidx-lifecycle-runtime-compose   = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose",   version.ref = "lifecycleRuntime" }
+androidx-activity-compose            = { group = "androidx.activity",  name = "activity-compose",            version.ref = "activityCompose" }
+
+# ── Compose BOM + UI ──────────────────────────────────────────────────────────
+# BOM: versiona automaticamente tutte le lib androidx.compose.*
+androidx-compose-bom             = { group = "androidx.compose",          name = "compose-bom",             version.ref = "composeBom" }
+androidx-ui                      = { group = "androidx.compose.ui",        name = "ui" }
+androidx-ui-graphics             = { group = "androidx.compose.ui",        name = "ui-graphics" }
+androidx-ui-tooling              = { group = "androidx.compose.ui",        name = "ui-tooling" }
+androidx-ui-tooling-preview      = { group = "androidx.compose.ui",        name = "ui-tooling-preview" }
+androidx-ui-test-manifest        = { group = "androidx.compose.ui",        name = "ui-test-manifest" }
+androidx-ui-test-junit4          = { group = "androidx.compose.ui",        name = "ui-test-junit4" }
+androidx-material3               = { group = "androidx.compose.material3", name = "material3" }
+# Attenzione: material-icons-extended aggiunge ~8 MB al DEX. Valuta di passare
+# a material-icons-core + icone selettive prima del rilascio.
+androidx-material-icons-extended = { group = "androidx.compose.material",  name = "material-icons-extended" }
+
+# ── Navigation ────────────────────────────────────────────────────────────────
+androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
+
+# ── Hilt (DI) ─────────────────────────────────────────────────────────────────
+hilt-android             = { group = "com.google.dagger", name = "hilt-android",          version.ref = "hilt" }
+hilt-android-compiler    = { group = "com.google.dagger", name = "hilt-android-compiler", version.ref = "hilt" }
+hilt-navigation-compose  = { group = "androidx.hilt",    name = "hilt-navigation-compose", version.ref = "hiltExtensions" }
+hilt-work                = { group = "androidx.hilt",    name = "hilt-work",               version.ref = "hiltExtensions" }
+hilt-compiler-androidx   = { group = "androidx.hilt",    name = "hilt-compiler",           version.ref = "hiltExtensions" }
+
+# ── Firebase ──────────────────────────────────────────────────────────────────
+# Le versioni individuali sono gestite dal BOM: non specificare version.ref qui
+firebase-bom             = { group = "com.google.firebase", name = "firebase-bom",          version.ref = "firebaseBom" }
+firebase-auth            = { group = "com.google.firebase", name = "firebase-auth" }
+firebase-firestore       = { group = "com.google.firebase", name = "firebase-firestore" }
+firebase-messaging       = { group = "com.google.firebase", name = "firebase-messaging" }
+firebase-storage         = { group = "com.google.firebase", name = "firebase-storage" }
+firebase-analytics       = { group = "com.google.firebase", name = "firebase-analytics" }
+
+# ── Credential Manager (Google Sign-In) ──────────────────────────────────────
+# credentials-play-services-auth: bridge per Android < 14 (via Play Services)
+credentials                = { group = "androidx.credentials",                                name = "credentials",                   version.ref = "credentialManager" }
+credentials-play-services  = { group = "androidx.credentials",                                name = "credentials-play-services-auth", version.ref = "credentialManager" }
+googleid                   = { group = "com.google.android.libraries.identity.googleid",      name = "googleid",                      version.ref = "googleId" }
+
+# ── Room (cache offline) ──────────────────────────────────────────────────────
+room-runtime  = { group = "androidx.room", name = "room-runtime",  version.ref = "room" }
+room-ktx      = { group = "androidx.room", name = "room-ktx",      version.ref = "room" }
+room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+
+# ── Coroutines ────────────────────────────────────────────────────────────────
+kotlinx-coroutines-android       = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android",       version.ref = "coroutines" }
+kotlinx-coroutines-play-services = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-play-services", version.ref = "coroutines" }
+
+# ── Coil (immagini) ───────────────────────────────────────────────────────────
+coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
+
+# ── Glance (widget) ───────────────────────────────────────────────────────────
+glance-appwidget = { group = "androidx.glance", name = "glance-appwidget", version.ref = "glance" }
+glance-material3 = { group = "androidx.glance", name = "glance-material3", version.ref = "glance" }
+
+# ── WorkManager ───────────────────────────────────────────────────────────────
+work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workManager" }
+
+# ── DataStore ─────────────────────────────────────────────────────────────────
+datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
+
+# ── Apache POI (export Excel XLSX) ───────────────────────────────────────────
+# Nota: poi-ooxml porta xmlbeans come transitivo. Su Android questo funziona
+# perché xmlbeans 5.x non ha dipendenze AWT. Il packaging gestisce i META-INF.
+poi-ooxml  = { group = "org.apache.poi",       name = "poi-ooxml",  version.ref = "poi" }
+xmlbeans   = { group = "org.apache.xmlbeans",  name = "xmlbeans",   version.ref = "xmlbeans" }
+
+# ── ML Kit (OCR scontrini) ────────────────────────────────────────────────────
+mlkit-text-recognition = { group = "com.google.mlkit", name = "text-recognition", version.ref = "mlkitTextRecognition" }
+
+# ── Test ──────────────────────────────────────────────────────────────────────
+junit                  = { group = "junit",                    name = "junit",          version.ref = "junit" }
+androidx-junit         = { group = "androidx.test.ext",        name = "junit",          version.ref = "junitExt" }
+androidx-espresso-core = { group = "androidx.test.espresso",   name = "espresso-core",  version.ref = "espresso" }
+
+
+[plugins]
+android-application = { id = "com.android.application",                version.ref = "agp" }
+kotlin-android      = { id = "org.jetbrains.kotlin.android",           version.ref = "kotlin" }
+# Con Kotlin 2.x il plugin Compose è separato dal plugin Android e
+# si occupa di invocare il compiler plugin bundled con il toolchain Kotlin.
+kotlin-compose      = { id = "org.jetbrains.kotlin.plugin.compose",    version.ref = "kotlin" }
+ksp                 = { id = "com.google.devtools.ksp",                 version.ref = "ksp" }
+hilt-android        = { id = "com.google.dagger.hilt.android",         version.ref = "hilt" }
+google-services     = { id = "com.google.gms.google-services",         version = "4.4.4" }

@@ -1,0 +1,99 @@
+package com.app.notespese.ui.navigation
+
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import com.app.notespese.data.model.Utente
+import com.app.notespese.ui.gruppi.CreaGruppoScreen
+import com.app.notespese.ui.gruppi.ListaGruppiScreen
+
+@Composable
+fun AppNavigation(
+    utente: Utente,
+    onSignOut: () -> Unit
+) {
+    val navController = rememberNavController()
+
+    NavHost(
+        navController    = navController,
+        startDestination = Screen.ListaGruppi.route
+    ) {
+
+        // ── Lista gruppi ───────────────────────────────────────────────────────
+        composable(Screen.ListaGruppi.route) {
+            ListaGruppiScreen(
+                utente       = utente,
+                onCreaGruppo = { navController.navigate(Screen.CreaGruppo.route) },
+                onApriGruppo = { gruppoId -> navController.navigate(Screen.Dashboard.withId(gruppoId)) },
+                onSignOut    = onSignOut
+            )
+        }
+
+        // ── Crea gruppo ────────────────────────────────────────────────────────
+        composable(Screen.CreaGruppo.route) {
+            CreaGruppoScreen(
+                onNavigateBack = { navController.popBackStack() },
+                // Dopo la creazione va alla Dashboard del gruppo appena creato
+                onGruppoCreato = { gruppoId ->
+                    navController.navigate(Screen.Dashboard.withId(gruppoId)) {
+                        popUpTo(Screen.ListaGruppi.route)
+                    }
+                }
+            )
+        }
+
+        // ── Dashboard gruppo ───────────────────────────────────────────────────
+        composable(
+            route     = Screen.Dashboard.route,
+            arguments = listOf(navArgument("gruppoId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val gruppoId = backStackEntry.arguments?.getString("gruppoId") ?: return@composable
+            // TODO step 5: DashboardScreen
+            Text("Dashboard — $gruppoId")
+        }
+
+        // ── Spese ──────────────────────────────────────────────────────────────
+        composable(
+            route     = Screen.Spese.route,
+            arguments = listOf(navArgument("gruppoId") { type = NavType.StringType })
+        ) {
+            Text("Spese — placeholder step 6")
+        }
+
+        // ── Entrate ────────────────────────────────────────────────────────────
+        composable(
+            route     = Screen.Entrate.route,
+            arguments = listOf(navArgument("gruppoId") { type = NavType.StringType })
+        ) {
+            Text("Entrate — placeholder step 9")
+        }
+
+        // ── Saldi ──────────────────────────────────────────────────────────────
+        composable(
+            route     = Screen.Saldi.route,
+            arguments = listOf(navArgument("gruppoId") { type = NavType.StringType })
+        ) {
+            Text("Saldi — placeholder step 7")
+        }
+
+        // ── Debiti ─────────────────────────────────────────────────────────────
+        composable(
+            route     = Screen.Debiti.route,
+            arguments = listOf(navArgument("gruppoId") { type = NavType.StringType })
+        ) {
+            Text("Debiti — placeholder")
+        }
+
+        // ── Impostazioni gruppo ────────────────────────────────────────────────
+        composable(
+            route     = Screen.ImpostazioniGruppo.route,
+            arguments = listOf(navArgument("gruppoId") { type = NavType.StringType })
+        ) {
+            Text("Impostazioni gruppo — placeholder")
+        }
+    }
+}

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Usati dal tema XML dell'Activity: evitano il flash bianco durante il
+         caricamento iniziale prima che Compose disegni il primo frame. -->
+    <color name="bg_light">#FAFCFF</color>
+    <color name="bg_dark">#1A1C1E</color>
+</resources>
