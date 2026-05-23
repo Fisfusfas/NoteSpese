@@ -51,4 +51,8 @@ class FirebaseSpesaRepository @Inject constructor(
     override suspend fun eliminaSpesa(gruppoId: String, spesaId: String): Result<Unit> = runCatching {
         speseRef(gruppoId).document(spesaId).delete().await()
     }
+
+    override suspend fun getSpesa(gruppoId: String, spesaId: String): Result<Spesa?> = runCatching {
+        speseRef(gruppoId).document(spesaId).get().await().toObject(Spesa::class.java)
+    }
 }

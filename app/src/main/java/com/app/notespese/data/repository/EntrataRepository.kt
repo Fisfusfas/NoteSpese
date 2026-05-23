@@ -14,4 +14,6 @@ interface EntrataRepository {
     suspend fun aggiornaEntrata(gruppoId: String, entrata: Entrata): Result<Unit>
 
     suspend fun eliminaEntrata(gruppoId: String, entrataId: String): Result<Unit>
+
+    suspend fun getEntrata(gruppoId: String, entrataId: String): Result<Entrata?>
 }

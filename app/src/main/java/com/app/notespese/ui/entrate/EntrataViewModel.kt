@@ -1,13 +1,14 @@
-package com.app.notespese.ui.spese
+package com.app.notespese.ui.entrate
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.notespese.data.model.Categoria
-import com.app.notespese.data.model.Spesa
+import com.app.notespese.data.model.Entrata
+import com.app.notespese.data.model.Membro
 import com.app.notespese.data.repository.CategoriaRepository
+import com.app.notespese.data.repository.EntrataRepository
 import com.app.notespese.data.repository.GruppoRepository
-import com.app.notespese.data.repository.SpesaRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -21,9 +22,9 @@ import java.time.YearMonth
 import javax.inject.Inject
 
 @HiltViewModel
-class SpesaViewModel @Inject constructor(
+class EntrataViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val spesaRepository: SpesaRepository,
+    private val entrataRepository: EntrataRepository,
     gruppoRepository: GruppoRepository,
     categoriaRepository: CategoriaRepository,
 ) : ViewModel() {
@@ -34,8 +35,9 @@ class SpesaViewModel @Inject constructor(
         data object Caricamento : UiState
         data class Successo(
             val nomeGruppo: String,
-            val spese: List<Spesa>,
+            val entrate: List<Entrata>,
             val categorie: List<Categoria>,
+            val membri: List<Membro>,
             val mese: Int,
             val anno: Int,
         ) : UiState
@@ -49,14 +51,16 @@ class SpesaViewModel @Inject constructor(
         .flatMapLatest { (mese, anno) ->
             combine(
                 gruppoRepository.osservaGruppo(gruppoId),
-                spesaRepository.osservaSpesePerMese(gruppoId, mese, anno),
+                entrataRepository.osservaEntratePerMese(gruppoId, mese, anno),
                 categoriaRepository.osservaCategorie(gruppoId),
-            ) { gruppo, spese, categorie ->
+                gruppoRepository.osservaMembri(gruppoId),
+            ) { gruppo, entrate, categorie, membri ->
                 if (gruppo == null) UiState.Errore("Gruppo non trovato")
                 else UiState.Successo(
                     nomeGruppo = gruppo.nome,
-                    spese      = spese.sortedByDescending { it.data?.seconds ?: 0L },
+                    entrate    = entrate,
                     categorie  = categorie,
+                    membri     = membri,
                     mese       = mese,
                     anno       = anno,
                 )
@@ -81,7 +85,7 @@ class SpesaViewModel @Inject constructor(
         }
     }
 
-    fun eliminaSpesa(spesaId: String) {
-        viewModelScope.launch { spesaRepository.eliminaSpesa(gruppoId, spesaId) }
+    fun eliminaEntrata(entrataId: String) {
+        viewModelScope.launch { entrataRepository.eliminaEntrata(gruppoId, entrataId) }
     }
 }

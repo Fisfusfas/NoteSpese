@@ -1,4 +1,4 @@
-package com.app.notespese.ui.spese
+package com.app.notespese.ui.entrate
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,7 +19,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Receipt
+import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -29,8 +29,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SuggestionChip
-import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
@@ -41,6 +39,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -48,43 +47,41 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.app.notespese.data.model.Categoria
-import com.app.notespese.data.model.Spesa
-import com.app.notespese.ui.gruppi.parseColore
+import com.app.notespese.data.model.Entrata
+import com.app.notespese.data.model.Membro
 import java.text.NumberFormat
-import java.time.Instant
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 @Composable
-fun SpesaScreen(
+fun EntrataScreen(
     onNavigateBack: () -> Unit,
-    onAggiungiSpesa: (String) -> Unit,
-    onModificaSpesa: (gruppoId: String, spesaId: String) -> Unit,
-    viewModel: SpesaViewModel = hiltViewModel(),
+    onAggiungiEntrata: (String) -> Unit,
+    onModificaEntrata: (gruppoId: String, entrataId: String) -> Unit,
+    viewModel: EntrataViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     when (val state = uiState) {
-        is SpesaViewModel.UiState.Caricamento -> {
+        is EntrataViewModel.UiState.Caricamento -> {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
         }
-        is SpesaViewModel.UiState.Errore -> {
+        is EntrataViewModel.UiState.Errore -> {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(state.messaggio, color = MaterialTheme.colorScheme.error)
             }
         }
-        is SpesaViewModel.UiState.Successo -> {
-            SpesaContent(
-                state            = state,
-                onNavigateBack   = onNavigateBack,
-                onAggiungiSpesa  = { onAggiungiSpesa(viewModel.gruppoId) },
-                onEliminaSpesa   = viewModel::eliminaSpesa,
-                onModificaSpesa  = { spesaId -> onModificaSpesa(viewModel.gruppoId, spesaId) },
-                onMesePrecedente = viewModel::mesePrecedente,
-                onMeseSuccessivo = viewModel::meseSuccessivo,
+        is EntrataViewModel.UiState.Successo -> {
+            EntrataContent(
+                state             = state,
+                onNavigateBack    = onNavigateBack,
+                onAggiungiEntrata = { onAggiungiEntrata(viewModel.gruppoId) },
+                onEliminaEntrata  = viewModel::eliminaEntrata,
+                onModificaEntrata = { entrataId -> onModificaEntrata(viewModel.gruppoId, entrataId) },
+                onMesePrecedente  = viewModel::mesePrecedente,
+                onMeseSuccessivo  = viewModel::meseSuccessivo,
             )
         }
     }
@@ -92,19 +89,19 @@ fun SpesaScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SpesaContent(
-    state: SpesaViewModel.UiState.Successo,
+private fun EntrataContent(
+    state: EntrataViewModel.UiState.Successo,
     onNavigateBack: () -> Unit,
-    onAggiungiSpesa: () -> Unit,
-    onEliminaSpesa: (String) -> Unit,
-    onModificaSpesa: (String) -> Unit,
+    onAggiungiEntrata: () -> Unit,
+    onEliminaEntrata: (String) -> Unit,
+    onModificaEntrata: (String) -> Unit,
     onMesePrecedente: () -> Unit,
     onMeseSuccessivo: () -> Unit,
 ) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Spese — ${state.nomeGruppo}", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                title = { Text("Entrate — ${state.nomeGruppo}", maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
@@ -113,8 +110,8 @@ private fun SpesaContent(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = onAggiungiSpesa) {
-                Icon(Icons.Default.Add, contentDescription = "Aggiungi spesa")
+            FloatingActionButton(onClick = onAggiungiEntrata) {
+                Icon(Icons.Default.Add, contentDescription = "Aggiungi entrata")
             }
         },
     ) { innerPadding ->
@@ -146,11 +143,11 @@ private fun SpesaContent(
             }
 
             // ── Riepilogo ─────────────────────────────────────────────────────
-            if (state.spese.isNotEmpty()) {
+            if (state.entrate.isNotEmpty()) {
                 item {
-                    val totale = state.spese.sumOf { it.importo }
+                    val totale = state.entrate.sumOf { it.importo }
                     Text(
-                        text     = "Totale: ${NumberFormat.getCurrencyInstance(Locale.ITALY).format(totale)}  ·  ${state.spese.size} operazioni",
+                        text     = "Totale: ${NumberFormat.getCurrencyInstance(Locale.ITALY).format(totale)}  ·  ${state.entrate.size} operazioni",
                         style    = MaterialTheme.typography.bodySmall,
                         color    = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
@@ -159,11 +156,11 @@ private fun SpesaContent(
                 }
             }
 
-            // ── Lista spese ───────────────────────────────────────────────────
-            if (state.spese.isEmpty()) {
+            // ── Lista entrate ─────────────────────────────────────────────────
+            if (state.entrate.isEmpty()) {
                 item {
                     Text(
-                        text      = "Nessuna spesa questo mese.\nPremi + per aggiungerne una.",
+                        text      = "Nessuna entrata questo mese.\nPremi + per aggiungerne una.",
                         style     = MaterialTheme.typography.bodyMedium,
                         color     = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
@@ -171,15 +168,19 @@ private fun SpesaContent(
                     )
                 }
             } else {
-                items(state.spese, key = { it.id }) { spesa ->
-                    val categoria = remember(spesa.categoriaId, state.categorie) {
-                        state.categorie.find { it.id == spesa.categoriaId }
+                items(state.entrate, key = { it.id }) { entrata ->
+                    val categoria = remember(entrata.categoriaId, state.categorie) {
+                        state.categorie.find { it.id == entrata.categoriaId }
                     }
-                    SpesaSwipeItem(
-                        spesa     = spesa,
+                    val membro = remember(entrata.persona, state.membri) {
+                        state.membri.find { it.userId == entrata.persona }
+                    }
+                    EntrataSwipeItem(
+                        entrata   = entrata,
                         categoria = categoria,
-                        onDelete  = { onEliminaSpesa(spesa.id) },
-                        onModifica = { onModificaSpesa(spesa.id) },
+                        membro    = membro,
+                        onDelete  = { onEliminaEntrata(entrata.id) },
+                        onModifica = { onModificaEntrata(entrata.id) },
                     )
                 }
             }
@@ -189,9 +190,10 @@ private fun SpesaContent(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SpesaSwipeItem(
-    spesa: Spesa,
+private fun EntrataSwipeItem(
+    entrata: Entrata,
     categoria: Categoria?,
+    membro: Membro?,
     onDelete: () -> Unit,
     onModifica: () -> Unit,
 ) {
@@ -218,61 +220,46 @@ private fun SpesaSwipeItem(
             }
         },
     ) {
-        RigaSpesa(spesa = spesa, categoria = categoria, onClick = onModifica)
+        RigaEntrata(entrata = entrata, categoria = categoria, membro = membro, onClick = onModifica)
     }
 }
 
 @Composable
-private fun RigaSpesa(spesa: Spesa, categoria: Categoria?, onClick: () -> Unit) {
-    val dataFormattata = remember(spesa.data) {
-        spesa.data?.toDate()?.let { date ->
-            val ld = Instant.ofEpochMilli(date.time).atZone(ZoneId.systemDefault()).toLocalDate()
-            DateTimeFormatter.ofPattern("d MMM", Locale.ITALIAN).format(ld)
-        } ?: ""
-    }
+private fun RigaEntrata(
+    entrata: Entrata,
+    categoria: Categoria?,
+    membro: Membro?,
+    onClick: () -> Unit,
+) {
+    val nomeMembro = membro?.nominativoLocale?.ifBlank { null }
+        ?: membro?.userId?.take(10)
+        ?: entrata.persona.take(10)
+
     ListItem(
         modifier          = Modifier.clickable(onClick = onClick),
         headlineContent   = {
-            Text(spesa.descrizione.ifBlank { "Spesa" }, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                text     = categoria?.nome ?: "Entrata",
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         },
         supportingContent = {
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                if (dataFormattata.isNotEmpty()) {
-                    Text(dataFormattata, style = MaterialTheme.typography.bodySmall)
-                }
-                categoria?.let { cat ->
-                    val catColor = parseColore(cat.colore)
-                    SuggestionChip(
-                        onClick  = {},
-                        label    = { Text(cat.nome, style = MaterialTheme.typography.labelSmall) },
-                        colors   = SuggestionChipDefaults.suggestionChipColors(
-                            containerColor = catColor.copy(alpha = 0.15f),
-                            labelColor     = catColor,
-                        ),
-                        modifier = Modifier.height(20.dp),
-                    )
-                }
-                if (spesa.condivisa) {
-                    SuggestionChip(
-                        onClick  = {},
-                        label    = { Text("Condivisa", style = MaterialTheme.typography.labelSmall) },
-                        colors   = SuggestionChipDefaults.suggestionChipColors(
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                        ),
-                        modifier = Modifier.height(20.dp),
-                    )
-                }
-            }
+            Text(nomeMembro, style = MaterialTheme.typography.bodySmall)
         },
         leadingContent    = {
-            Icon(Icons.Default.Receipt, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Icon(
+                imageVector        = Icons.Default.TrendingUp,
+                contentDescription = null,
+                tint               = Color(0xFF2E7D32),
+            )
         },
         trailingContent   = {
             Text(
-                text       = NumberFormat.getCurrencyInstance(Locale.ITALY).format(spesa.importo),
+                text       = NumberFormat.getCurrencyInstance(Locale.ITALY).format(entrata.importo),
                 style      = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
-                color      = MaterialTheme.colorScheme.primary,
+                color      = Color(0xFF2E7D32),
             )
         },
     )

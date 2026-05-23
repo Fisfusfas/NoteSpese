@@ -9,6 +9,8 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.app.notespese.data.model.Utente
 import com.app.notespese.ui.dashboard.DashboardScreen
+import com.app.notespese.ui.entrate.AggiungiEntrataScreen
+import com.app.notespese.ui.entrate.EntrataScreen
 import com.app.notespese.ui.gruppi.CreaGruppoScreen
 import com.app.notespese.ui.gruppi.ListaGruppiScreen
 import com.app.notespese.ui.saldi.SaldoScreen
@@ -41,7 +43,6 @@ fun AppNavigation(
         composable(Screen.CreaGruppo.route) {
             CreaGruppoScreen(
                 onNavigateBack = { navController.popBackStack() },
-                // Dopo la creazione va alla Dashboard del gruppo appena creato
                 onGruppoCreato = { gruppoId ->
                     navController.navigate(Screen.Dashboard.withId(gruppoId)) {
                         popUpTo(Screen.ListaGruppi.route)
@@ -75,6 +76,9 @@ fun AppNavigation(
             SpesaScreen(
                 onNavigateBack  = { navController.popBackStack() },
                 onAggiungiSpesa = { id -> navController.navigate(Screen.AggiungiSpesa.withId(id)) },
+                onModificaSpesa = { gruppoId, spesaId ->
+                    navController.navigate(Screen.ModificaSpesa.withIds(gruppoId, spesaId))
+                },
             )
         }
 
@@ -88,12 +92,54 @@ fun AppNavigation(
             )
         }
 
+        // ── Modifica spesa ─────────────────────────────────────────────────────
+        composable(
+            route     = Screen.ModificaSpesa.route,
+            arguments = listOf(
+                navArgument("gruppoId") { type = NavType.StringType },
+                navArgument("spesaId")  { type = NavType.StringType },
+            )
+        ) {
+            AggiungiSpesaScreen(
+                onNavigateBack = { navController.popBackStack() },
+            )
+        }
+
         // ── Entrate ────────────────────────────────────────────────────────────
         composable(
             route     = Screen.Entrate.route,
             arguments = listOf(navArgument("gruppoId") { type = NavType.StringType })
         ) {
-            Text("Entrate — placeholder step 9")
+            EntrataScreen(
+                onNavigateBack    = { navController.popBackStack() },
+                onAggiungiEntrata = { id -> navController.navigate(Screen.AggiungiEntrata.withId(id)) },
+                onModificaEntrata = { gruppoId, entrataId ->
+                    navController.navigate(Screen.ModificaEntrata.withIds(gruppoId, entrataId))
+                },
+            )
+        }
+
+        // ── Aggiungi entrata ───────────────────────────────────────────────────
+        composable(
+            route     = Screen.AggiungiEntrata.route,
+            arguments = listOf(navArgument("gruppoId") { type = NavType.StringType })
+        ) {
+            AggiungiEntrataScreen(
+                onNavigateBack = { navController.popBackStack() },
+            )
+        }
+
+        // ── Modifica entrata ───────────────────────────────────────────────────
+        composable(
+            route     = Screen.ModificaEntrata.route,
+            arguments = listOf(
+                navArgument("gruppoId")   { type = NavType.StringType },
+                navArgument("entrataId")  { type = NavType.StringType },
+            )
+        ) {
+            AggiungiEntrataScreen(
+                onNavigateBack = { navController.popBackStack() },
+            )
         }
 
         // ── Saldi ──────────────────────────────────────────────────────────────

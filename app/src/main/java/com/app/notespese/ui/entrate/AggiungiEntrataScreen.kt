@@ -1,4 +1,4 @@
-package com.app.notespese.ui.spese
+package com.app.notespese.ui.entrate
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,69 +14,60 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.app.notespese.data.model.TipoSpesa
 import com.app.notespese.ui.common.CategoriaSelector
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AggiungiSpesaScreen(
+fun AggiungiEntrataScreen(
     onNavigateBack: () -> Unit,
-    viewModel: AggiungiSpesaViewModel = hiltViewModel(),
+    viewModel: AggiungiEntrataViewModel = hiltViewModel(),
 ) {
     val esito = viewModel.esito
     LaunchedEffect(esito) {
-        if (esito is AggiungiSpesaViewModel.Esito.Salvato) onNavigateBack()
+        if (esito is AggiungiEntrataViewModel.Esito.Salvato) onNavigateBack()
     }
 
     val categorie by viewModel.categorie.collectAsStateWithLifecycle()
     val membri    by viewModel.membri.collectAsStateWithLifecycle()
 
-    var showDatePicker by rememberSaveable { mutableStateOf(false) }
     var dropdownExpanded by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title          = { Text(if (viewModel.isModifica) "Modifica spesa" else "Nuova spesa") },
+                title          = { Text(if (viewModel.isModifica) "Modifica entrata" else "Nuova entrata") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
@@ -96,24 +87,15 @@ fun AggiungiSpesaScreen(
 
             // ── Importo ────────────────────────────────────────────────────────
             OutlinedTextField(
-                value         = viewModel.importoText,
-                onValueChange = { viewModel.importoText = it; viewModel.erroreImporto = false },
-                label         = { Text("Importo *") },
-                prefix        = { Text("€") },
-                singleLine    = true,
-                isError       = viewModel.erroreImporto,
+                value          = viewModel.importoText,
+                onValueChange  = { viewModel.importoText = it; viewModel.erroreImporto = false },
+                label          = { Text("Importo *") },
+                prefix         = { Text("€") },
+                singleLine     = true,
+                isError        = viewModel.erroreImporto,
                 supportingText = if (viewModel.erroreImporto) {{ Text("Inserisci un importo valido") }} else null,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                modifier      = Modifier.fillMaxWidth(),
-            )
-
-            // ── Descrizione ────────────────────────────────────────────────────
-            OutlinedTextField(
-                value         = viewModel.descrizione,
-                onValueChange = { viewModel.descrizione = it },
-                label         = { Text("Descrizione") },
-                singleLine    = true,
-                modifier      = Modifier.fillMaxWidth(),
+                modifier       = Modifier.fillMaxWidth(),
             )
 
             // ── Categoria ──────────────────────────────────────────────────────
@@ -124,21 +106,21 @@ fun AggiungiSpesaScreen(
                 onCreaCategoria        = { nome, colore -> viewModel.creaCategoria(nome, colore) },
             )
 
-            // ── Chi paga ───────────────────────────────────────────────────────
+            // ── Chi ha ricevuto ────────────────────────────────────────────────
             if (membri.isNotEmpty()) {
                 ExposedDropdownMenuBox(
                     expanded         = dropdownExpanded,
                     onExpandedChange = { dropdownExpanded = it },
                 ) {
-                    val membroCorrente = membri.find { it.userId == viewModel.pagante }
-                    val labelPagante = membroCorrente?.nominativoLocale?.ifBlank { null }
+                    val membroCorrente = membri.find { it.userId == viewModel.persona }
+                    val labelPersona = membroCorrente?.nominativoLocale?.ifBlank { null }
                         ?: membroCorrente?.userId?.take(10)
                         ?: "Seleziona"
                     OutlinedTextField(
-                        value         = labelPagante,
+                        value         = labelPersona,
                         onValueChange = {},
                         readOnly      = true,
-                        label         = { Text("Chi paga") },
+                        label         = { Text("Persona") },
                         trailingIcon  = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownExpanded) },
                         modifier      = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
                     )
@@ -150,68 +132,40 @@ fun AggiungiSpesaScreen(
                             val nome = membro.nominativoLocale.ifBlank { membro.userId.take(10) }
                             DropdownMenuItem(
                                 text    = { Text(nome) },
-                                onClick = { viewModel.pagante = membro.userId; dropdownExpanded = false },
+                                onClick = { viewModel.persona = membro.userId; dropdownExpanded = false },
                             )
                         }
                     }
                 }
             }
 
-            // ── Condivisa ──────────────────────────────────────────────────────
-            Row(
-                modifier          = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Column {
-                    Text("Spesa condivisa", style = MaterialTheme.typography.bodyLarge)
-                    Text(
-                        text  = "Verrà divisa tra i membri del gruppo",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Switch(
-                    checked         = viewModel.condivisa,
-                    onCheckedChange = { viewModel.condivisa = it },
-                )
+            // ── Mese / Anno ────────────────────────────────────────────────────
+            val etichettaMese = remember(viewModel.mese, viewModel.anno) {
+                val fmt = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ITALIAN)
+                java.time.LocalDate.of(viewModel.anno, viewModel.mese, 1)
+                    .format(fmt).replaceFirstChar { it.uppercase() }
             }
-
-            // ── Tipo ───────────────────────────────────────────────────────────
             Column {
                 Text(
-                    text  = "Tipo",
+                    text  = "Mese di competenza",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Spacer(Modifier.height(4.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TipoSpesa.entries.forEach { t ->
-                        FilterChip(
-                            selected = viewModel.tipo == t,
-                            onClick  = { viewModel.tipo = t },
-                            label    = { Text(t.name.lowercase().replaceFirstChar { it.uppercase() }) },
-                        )
+                Row(
+                    modifier          = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    IconButton(onClick = viewModel::mesePrecedente) {
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Mese precedente")
+                    }
+                    Text(etichettaMese, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                    IconButton(onClick = viewModel::meseSuccessivo) {
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Mese successivo")
                     }
                 }
+                HorizontalDivider()
             }
-
-            // ── Data ───────────────────────────────────────────────────────────
-            val dataLabel = remember(viewModel.dataSelezionata) {
-                DateTimeFormatter.ofPattern("d MMMM yyyy", Locale.ITALIAN).format(viewModel.dataSelezionata)
-            }
-            OutlinedTextField(
-                value         = dataLabel,
-                onValueChange = {},
-                readOnly      = true,
-                label         = { Text("Data") },
-                trailingIcon  = {
-                    IconButton(onClick = { showDatePicker = true }) {
-                        Icon(Icons.Default.CalendarToday, contentDescription = "Scegli data")
-                    }
-                },
-                modifier      = Modifier.fillMaxWidth(),
-            )
 
             // ── Note ───────────────────────────────────────────────────────────
             OutlinedTextField(
@@ -226,49 +180,25 @@ fun AggiungiSpesaScreen(
             // ── Bottone salva ──────────────────────────────────────────────────
             Button(
                 onClick  = { viewModel.salva() },
-                enabled  = esito !is AggiungiSpesaViewModel.Esito.Caricamento,
+                enabled  = esito !is AggiungiEntrataViewModel.Esito.Caricamento,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
             ) {
-                if (esito is AggiungiSpesaViewModel.Esito.Caricamento) {
+                if (esito is AggiungiEntrataViewModel.Esito.Caricamento) {
                     CircularProgressIndicator(modifier = Modifier.height(20.dp), strokeWidth = 2.dp)
                 } else {
-                    Text(if (viewModel.isModifica) "Aggiorna spesa" else "Salva spesa")
+                    Text(if (viewModel.isModifica) "Aggiorna entrata" else "Salva entrata")
                 }
             }
 
-            if (esito is AggiungiSpesaViewModel.Esito.Errore) {
+            if (esito is AggiungiEntrataViewModel.Esito.Errore) {
                 Text(
-                    text  = (esito as AggiungiSpesaViewModel.Esito.Errore).msg,
+                    text  = (esito as AggiungiEntrataViewModel.Esito.Errore).msg,
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
 
             Spacer(Modifier.height(8.dp))
-        }
-    }
-
-    // ── DatePickerDialog ───────────────────────────────────────────────────────
-    if (showDatePicker) {
-        val initialMillis = viewModel.dataSelezionata
-            .atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = initialMillis)
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton    = {
-                TextButton(onClick = {
-                    datePickerState.selectedDateMillis?.let { millis ->
-                        viewModel.dataSelezionata = Instant.ofEpochMilli(millis)
-                            .atZone(ZoneId.systemDefault()).toLocalDate()
-                    }
-                    showDatePicker = false
-                }) { Text("OK") }
-            },
-            dismissButton    = {
-                TextButton(onClick = { showDatePicker = false }) { Text("Annulla") }
-            },
-        ) {
-            DatePicker(state = datePickerState)
         }
     }
 }

@@ -1,21 +1,20 @@
-package com.app.notespese.ui.spese
+package com.app.notespese.ui.entrate
 
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.notespese.data.model.Categoria
+import com.app.notespese.data.model.Entrata
 import com.app.notespese.data.model.Membro
-import com.app.notespese.data.model.Spesa
 import com.app.notespese.data.model.TipoCategoria
-import com.app.notespese.data.model.TipoSpesa
 import com.app.notespese.data.repository.AuthRepository
 import com.app.notespese.data.repository.CategoriaRepository
+import com.app.notespese.data.repository.EntrataRepository
 import com.app.notespese.data.repository.GruppoRepository
-import com.app.notespese.data.repository.SpesaRepository
-import com.google.firebase.Timestamp
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -23,34 +22,30 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.time.LocalDate
-import java.time.ZoneId
-import java.util.Date
+import java.time.YearMonth
 import javax.inject.Inject
 
 @HiltViewModel
-class AggiungiSpesaViewModel @Inject constructor(
+class AggiungiEntrataViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val spesaRepository: SpesaRepository,
+    private val entrataRepository: EntrataRepository,
     private val categoriaRepository: CategoriaRepository,
     gruppoRepository: GruppoRepository,
     authRepository: AuthRepository,
 ) : ViewModel() {
 
     private val gruppoId: String = checkNotNull(savedStateHandle["gruppoId"])
-    private val spesaId: String? = savedStateHandle.get<String>("spesaId")
-    val isModifica: Boolean = spesaId != null
+    private val entrataId: String? = savedStateHandle.get<String>("entrataId")
+    val isModifica: Boolean = entrataId != null
 
     // ── Form state ─────────────────────────────────────────────────────────────
-    var importoText     by mutableStateOf("")
-    var descrizione     by mutableStateOf("")
-    var categoriaId     by mutableStateOf("")
-    var pagante         by mutableStateOf("")
-    var condivisa       by mutableStateOf(true)
-    var tipo            by mutableStateOf(TipoSpesa.VARIABILE)
-    var dataSelezionata by mutableStateOf(LocalDate.now())
-    var note            by mutableStateOf("")
-    var erroreImporto   by mutableStateOf(false)
+    var importoText   by mutableStateOf("")
+    var persona       by mutableStateOf("")
+    var categoriaId   by mutableStateOf("")
+    var mese          by mutableIntStateOf(YearMonth.now().monthValue)
+    var anno          by mutableIntStateOf(YearMonth.now().year)
+    var note          by mutableStateOf("")
+    var erroreImporto by mutableStateOf(false)
 
     sealed interface Esito {
         data object Inattivo    : Esito
@@ -63,7 +58,7 @@ class AggiungiSpesaViewModel @Inject constructor(
     // ── Dati caricati ──────────────────────────────────────────────────────────
     val categorie: StateFlow<List<Categoria>> = categoriaRepository
         .osservaCategorie(gruppoId)
-        .map { list -> list.filter { it.tipo != TipoCategoria.ENTRATA.name } }
+        .map { list -> list.filter { it.tipo != TipoCategoria.SPESA.name } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val membri: StateFlow<List<Membro>> = gruppoRepository
@@ -73,29 +68,34 @@ class AggiungiSpesaViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             val utente = authRepository.utenteCorrente.first()
-            if (utente != null) pagante = utente.id
+            if (utente != null) persona = utente.id
         }
-        spesaId?.let { id ->
+        entrataId?.let { id ->
             viewModelScope.launch {
-                spesaRepository.getSpesa(gruppoId, id).onSuccess { spesa ->
-                    spesa?.let {
-                        importoText     = it.importo.toBigDecimal().stripTrailingZeros().toPlainString()
-                        descrizione     = it.descrizione
-                        categoriaId     = it.categoriaId
-                        pagante         = it.pagante
-                        condivisa       = it.condivisa
-                        tipo            = TipoSpesa.entries.find { t -> t.name == it.tipo } ?: TipoSpesa.VARIABILE
-                        it.data?.toDate()?.let { date ->
-                            dataSelezionata = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
-                        }
-                        note = it.note
+                entrataRepository.getEntrata(gruppoId, id).onSuccess { entrata ->
+                    entrata?.let {
+                        importoText = it.importo.toBigDecimal().stripTrailingZeros().toPlainString()
+                        persona     = it.persona
+                        categoriaId = it.categoriaId
+                        mese        = it.mese
+                        anno        = it.anno
+                        note        = it.note
                     }
                 }
             }
         }
     }
 
-    // ── Azioni ────────────────────────────────────────────────────────────────
+    fun mesePrecedente() {
+        val ym = YearMonth.of(anno, mese).minusMonths(1)
+        mese = ym.monthValue; anno = ym.year
+    }
+
+    fun meseSuccessivo() {
+        val ym = YearMonth.of(anno, mese).plusMonths(1)
+        mese = ym.monthValue; anno = ym.year
+    }
+
     fun salva() {
         val importoDouble = importoText.replace(",", ".").toDoubleOrNull()
         if (importoDouble == null || importoDouble <= 0.0) {
@@ -103,26 +103,21 @@ class AggiungiSpesaViewModel @Inject constructor(
             return
         }
         erroreImporto = false
-        val dataFirebase = Timestamp(Date.from(dataSelezionata.atStartOfDay(ZoneId.systemDefault()).toInstant()))
-        val spesa = Spesa(
-            id          = spesaId ?: "",
+        val entrata = Entrata(
+            id          = entrataId ?: "",
             importo     = importoDouble,
-            descrizione = descrizione.trim(),
+            persona     = persona,
             categoriaId = categoriaId,
-            pagante     = pagante,
-            condivisa   = condivisa,
-            tipo        = tipo.name,
-            data        = dataFirebase,
-            mese        = dataSelezionata.monthValue,
-            anno        = dataSelezionata.year,
+            mese        = mese,
+            anno        = anno,
             note        = note.trim(),
         )
         viewModelScope.launch {
             esito = Esito.Caricamento
             val result: Result<*> = if (isModifica) {
-                spesaRepository.aggiornaSpesa(gruppoId, spesa)
+                entrataRepository.aggiornaEntrata(gruppoId, entrata)
             } else {
-                spesaRepository.aggiungiSpesa(gruppoId, spesa)
+                entrataRepository.aggiungiEntrata(gruppoId, entrata)
             }
             esito = result.fold(
                 onSuccess = { Esito.Salvato },
@@ -133,7 +128,7 @@ class AggiungiSpesaViewModel @Inject constructor(
 
     fun creaCategoria(nome: String, colore: String) {
         viewModelScope.launch {
-            val cat = Categoria(nome = nome.trim(), icona = "label", colore = colore, tipo = TipoCategoria.SPESA.name)
+            val cat = Categoria(nome = nome.trim(), icona = "label", colore = colore, tipo = TipoCategoria.ENTRATA.name)
             categoriaRepository.aggiungiCategoria(gruppoId, cat).onSuccess { id ->
                 categoriaId = id
             }

@@ -50,4 +50,8 @@ class FirebaseEntrataRepository @Inject constructor(
     override suspend fun eliminaEntrata(gruppoId: String, entrataId: String): Result<Unit> = runCatching {
         entrateRef(gruppoId).document(entrataId).delete().await()
     }
+
+    override suspend fun getEntrata(gruppoId: String, entrataId: String): Result<Entrata?> = runCatching {
+        entrateRef(gruppoId).document(entrataId).get().await().toObject(Entrata::class.java)
+    }
 }

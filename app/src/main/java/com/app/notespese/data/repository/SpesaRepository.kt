@@ -15,4 +15,6 @@ interface SpesaRepository {
     suspend fun aggiornaSpesa(gruppoId: String, spesa: Spesa): Result<Unit>
 
     suspend fun eliminaSpesa(gruppoId: String, spesaId: String): Result<Unit>
+
+    suspend fun getSpesa(gruppoId: String, spesaId: String): Result<Spesa?>
 }
