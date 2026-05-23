@@ -228,7 +228,8 @@ private fun CardCategoria(
     isExpanded: Boolean,
     onClick: () -> Unit,
 ) {
-    val colore = parseColore(cat.colore)
+    val colore      = parseColore(cat.colore)
+    val barColor    = if (cat.superaBudget) MaterialTheme.colorScheme.error else colore
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
@@ -250,6 +251,7 @@ private fun CardCategoria(
                     text       = NumberFormat.getCurrencyInstance(Locale.ITALY).format(cat.totale),
                     style      = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold,
+                    color      = if (cat.superaBudget) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
                 )
                 Spacer(Modifier.width(4.dp))
                 Icon(
@@ -263,15 +265,25 @@ private fun CardCategoria(
             LinearProgressIndicator(
                 progress   = { cat.percentualeBar },
                 modifier   = Modifier.fillMaxWidth(),
-                color      = colore,
+                color      = barColor,
                 trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
             )
             Spacer(Modifier.height(4.dp))
-            Text(
-                text  = "${cat.nSpese} ${if (cat.nSpese == 1) "spesa" else "spese"}  ·  ${cat.percentualeLabel}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Row(
+                modifier              = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text  = "${cat.nSpese} ${if (cat.nSpese == 1) "spesa" else "spese"}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text  = cat.percentualeLabel,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (cat.superaBudget) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }
@@ -377,11 +389,21 @@ private fun CardPagante(pagante: AnalisiMeseViewModel.PaganteAnalisi) {
                 trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
             )
             Spacer(Modifier.height(4.dp))
-            Text(
-                text  = "${pagante.nSpese} ${if (pagante.nSpese == 1) "spesa" else "spese"}  ·  ${(pagante.percentualeBar * 100).toInt()}% del tot. spese",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Row(
+                modifier              = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text  = "${pagante.nSpese} ${if (pagante.nSpese == 1) "spesa" else "spese"}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text  = "${NumberFormat.getCurrencyInstance(Locale.ITALY).format(pagante.totale)}  ·  ${(pagante.percentualeBar * 100).toInt()}%",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }
