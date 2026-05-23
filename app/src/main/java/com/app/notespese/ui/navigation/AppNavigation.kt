@@ -15,6 +15,7 @@ import com.app.notespese.ui.entrate.AggiungiEntrataScreen
 import com.app.notespese.ui.entrate.EntrataScreen
 import com.app.notespese.ui.gruppi.CreaGruppoScreen
 import com.app.notespese.ui.gruppi.ListaGruppiScreen
+import com.app.notespese.ui.profilo.ProfiloScreen
 import com.app.notespese.ui.gruppi.impostazioni.ImpostazioniGruppoScreen
 import com.app.notespese.ui.ricorrenze.AggiungiRicorrenzaScreen
 import com.app.notespese.ui.ricorrenze.RicorrenzeScreen
@@ -40,8 +41,14 @@ fun AppNavigation(
                 utente       = utente,
                 onCreaGruppo = { navController.navigate(Screen.CreaGruppo.route) },
                 onApriGruppo = { gruppoId -> navController.navigate(Screen.Dashboard.withId(gruppoId)) },
+                onApriProfilo = { navController.navigate(Screen.Profilo.route) },
                 onSignOut    = onSignOut
             )
+        }
+
+        // ── Profilo utente ─────────────────────────────────────────────────────
+        composable(Screen.Profilo.route) {
+            ProfiloScreen(onNavigateBack = { navController.popBackStack() })
         }
 
         // ── Crea gruppo ────────────────────────────────────────────────────────

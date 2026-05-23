@@ -38,4 +38,9 @@ class MockAuthRepository @Inject constructor() : AuthRepository {
     override suspend fun signOut() {
         _utente.value = null
     }
+
+    override suspend fun aggiornaNome(nome: String): Result<Unit> {
+        _utente.value = _utente.value?.copy(nome = nome)
+        return Result.success(Unit)
+    }
 }

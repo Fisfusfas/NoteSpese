@@ -8,6 +8,7 @@ sealed class Screen(val route: String) {
     data object ListaGruppi  : Screen("lista_gruppi")
     data object CreaGruppo   : Screen("crea_gruppo")
     data object AccettaInvito: Screen("accetta_invito")
+    data object Profilo      : Screen("profilo")
 
     // ── Gruppo (riceve gruppoId come path param) ───────────────────────────────
     data object Dashboard         : Screen("gruppo/{gruppoId}/dashboard") {

@@ -14,4 +14,7 @@ interface AuthRepository {
     suspend fun signInAnonymously(): Result<Utente>
 
     suspend fun signOut()
+
+    /** Aggiorna il nome visualizzato dell'utente in users/{userId}. */
+    suspend fun aggiornaNome(nome: String): Result<Unit>
 }

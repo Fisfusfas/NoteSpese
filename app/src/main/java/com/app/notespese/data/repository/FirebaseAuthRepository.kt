@@ -65,6 +65,13 @@ class FirebaseAuthRepository @Inject constructor(
         firebaseAuth.signOut()
     }
 
+    override suspend fun aggiornaNome(nome: String): Result<Unit> = runCatching {
+        val userId = firebaseAuth.currentUser?.uid ?: error("Utente non autenticato")
+        firestore.collection("users").document(userId)
+            .update("nome", nome)
+            .await()
+    }
+
     /**
      * Crea o aggiorna il documento users/{uid} su Firestore.
      * SetOptions.merge() garantisce che campi non presenti nella mappa non vengano cancellati

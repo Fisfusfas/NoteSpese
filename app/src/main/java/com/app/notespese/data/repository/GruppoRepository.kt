@@ -32,4 +32,7 @@ interface GruppoRepository {
     suspend fun rimuoviMembro(gruppoId: String, userId: String): Result<Unit>
 
     suspend fun aggiornaMembro(gruppoId: String, membro: Membro): Result<Unit>
+
+    /** Aggiorna nominativoLocale in tutti i gruppi a cui appartiene [userId]. */
+    suspend fun aggiornaNominativoInTuttiGruppi(userId: String, nominativo: String): Result<Unit>
 }

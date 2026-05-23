@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material.icons.filled.Work
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -76,6 +77,7 @@ fun ListaGruppiScreen(
     utente: Utente,
     onCreaGruppo: () -> Unit,
     onApriGruppo: (String) -> Unit,
+    onApriProfilo: () -> Unit,
     onSignOut: () -> Unit,
     viewModel: ListaGruppiViewModel = hiltViewModel()
 ) {
@@ -163,6 +165,13 @@ fun ListaGruppiScreen(
                         Icon(
                             imageVector        = Icons.Default.VpnKey,
                             contentDescription = "Entra con codice",
+                            tint               = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
+                    }
+                    IconButton(onClick = onApriProfilo) {
+                        Icon(
+                            imageVector        = Icons.Default.AccountCircle,
+                            contentDescription = "Profilo",
                             tint               = MaterialTheme.colorScheme.onPrimaryContainer,
                         )
                     }

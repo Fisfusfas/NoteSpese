@@ -110,4 +110,19 @@ class FirebaseGruppoRepository @Inject constructor(
             .set(membro)
             .await()
     }
+
+    override suspend fun aggiornaNominativoInTuttiGruppi(userId: String, nominativo: String): Result<Unit> = runCatching {
+        val gruppi = gruppiRef()
+            .whereArrayContains("membroIds", userId)
+            .get().await().documents
+        if (gruppi.isEmpty()) return@runCatching
+        firestore.runBatch { batch ->
+            gruppi.forEach { doc ->
+                batch.update(
+                    doc.reference.collection("membri").document(userId),
+                    "nominativoLocale", nominativo,
+                )
+            }
+        }.await()
+    }
 }
