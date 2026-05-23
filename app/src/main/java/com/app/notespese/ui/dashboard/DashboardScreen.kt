@@ -20,7 +20,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Balance
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Receipt
@@ -70,7 +69,6 @@ fun DashboardScreen(
     onApriSpese: (String) -> Unit,
     onApriEntrate: (String) -> Unit,
     onApriSaldi: (String) -> Unit,
-    onApriDebiti: (String) -> Unit,
     onApriImpostazioni: (String) -> Unit,
     onApriAnalisi: (gruppoId: String, mese: Int, anno: Int) -> Unit,
     onApriAnalisiEntrate: (gruppoId: String, mese: Int, anno: Int) -> Unit,
@@ -96,7 +94,6 @@ fun DashboardScreen(
                 onApriSpese          = { onApriSpese(gruppoId) },
                 onApriEntrate        = { onApriEntrate(gruppoId) },
                 onApriSaldi          = { onApriSaldi(gruppoId) },
-                onApriDebiti         = { onApriDebiti(gruppoId) },
                 onApriImpostazioni   = { onApriImpostazioni(gruppoId) },
                 onApriAnalisi        = { onApriAnalisi(gruppoId, state.mese, state.anno) },
                 onApriAnalisiEntrate = { onApriAnalisiEntrate(gruppoId, state.mese, state.anno) },
@@ -116,7 +113,6 @@ private fun DashboardContent(
     onApriAnalisiEntrate: () -> Unit,
     onApriEntrate: () -> Unit,
     onApriSaldi: () -> Unit,
-    onApriDebiti: () -> Unit,
     onApriImpostazioni: () -> Unit,
     onApriAnalisi: () -> Unit,
     onMesePrecedente: () -> Unit,
@@ -266,27 +262,12 @@ private fun DashboardContent(
                         colore    = Color(0xFF2E7D32),
                         onClick   = onApriEntrate,
                     )
-                }
-                Spacer(Modifier.height(12.dp))
-                Row(
-                    modifier              = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
                     CardNavigazione(
                         modifier  = Modifier.weight(1f),
                         etichetta = "Saldi",
                         icona     = Icons.Default.Balance,
                         colore    = Color(0xFF6A1B9A),
                         onClick   = onApriSaldi,
-                    )
-                    CardNavigazione(
-                        modifier  = Modifier.weight(1f),
-                        etichetta = "Debiti",
-                        icona     = Icons.Default.AccountBalance,
-                        colore    = Color(0xFFC62828),
-                        onClick   = onApriDebiti,
                     )
                 }
                 Spacer(Modifier.height(16.dp))

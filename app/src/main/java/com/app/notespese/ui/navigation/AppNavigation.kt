@@ -1,6 +1,5 @@
 package com.app.notespese.ui.navigation
 
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -66,7 +65,6 @@ fun AppNavigation(
                 onApriSpese          = { id -> navController.navigate(Screen.Spese.withId(id)) },
                 onApriEntrate        = { id -> navController.navigate(Screen.Entrate.withId(id)) },
                 onApriSaldi          = { id -> navController.navigate(Screen.Saldi.withId(id)) },
-                onApriDebiti         = { id -> navController.navigate(Screen.Debiti.withId(id)) },
                 onApriImpostazioni   = { id -> navController.navigate(Screen.ImpostazioniGruppo.withId(id)) },
                 onApriAnalisi        = { gId, mese, anno ->
                     navController.navigate(Screen.AnalisiMese.withParams(gId, mese, anno))
@@ -149,14 +147,6 @@ fun AppNavigation(
             arguments = listOf(navArgument("gruppoId") { type = NavType.StringType })
         ) {
             SaldoScreen(onNavigateBack = { navController.popBackStack() })
-        }
-
-        // ── Debiti ─────────────────────────────────────────────────────────────
-        composable(
-            route     = Screen.Debiti.route,
-            arguments = listOf(navArgument("gruppoId") { type = NavType.StringType })
-        ) {
-            Text("Debiti — placeholder")
         }
 
         // ── Analisi spese mese ─────────────────────────────────────────────────
