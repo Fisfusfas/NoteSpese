@@ -11,6 +11,8 @@ import com.app.notespese.data.model.Utente
 import com.app.notespese.ui.dashboard.DashboardScreen
 import com.app.notespese.ui.gruppi.CreaGruppoScreen
 import com.app.notespese.ui.gruppi.ListaGruppiScreen
+import com.app.notespese.ui.spese.AggiungiSpesaScreen
+import com.app.notespese.ui.spese.SpesaScreen
 
 @Composable
 fun AppNavigation(
@@ -69,7 +71,20 @@ fun AppNavigation(
             route     = Screen.Spese.route,
             arguments = listOf(navArgument("gruppoId") { type = NavType.StringType })
         ) {
-            Text("Spese — placeholder step 6")
+            SpesaScreen(
+                onNavigateBack  = { navController.popBackStack() },
+                onAggiungiSpesa = { id -> navController.navigate(Screen.AggiungiSpesa.withId(id)) },
+            )
+        }
+
+        // ── Aggiungi spesa ─────────────────────────────────────────────────────
+        composable(
+            route     = Screen.AggiungiSpesa.route,
+            arguments = listOf(navArgument("gruppoId") { type = NavType.StringType })
+        ) {
+            AggiungiSpesaScreen(
+                onNavigateBack = { navController.popBackStack() },
+            )
         }
 
         // ── Entrate ────────────────────────────────────────────────────────────
