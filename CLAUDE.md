@@ -199,7 +199,7 @@ Login
 | 2 | Firebase Auth Google Sign-In (Credential Manager) | ✅ |
 | 3 | Modelli dati Kotlin + Repository Firestore | ✅ |
 | 4 | Lista gruppi + Creazione gruppo | ✅ |
-| 5 | Dashboard gruppo | ⬜ |
+| 5 | Dashboard gruppo | ✅ |
 | 6 | Form aggiunta spesa + CategoriaSelector | ⬜ |
 | 7 | Calcolo saldo (debt simplification) + schermata saldi | ⬜ |
 | 8 | Sistema inviti con codice 8 caratteri | ⬜ |

@@ -8,6 +8,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.app.notespese.data.model.Utente
+import com.app.notespese.ui.dashboard.DashboardScreen
 import com.app.notespese.ui.gruppi.CreaGruppoScreen
 import com.app.notespese.ui.gruppi.ListaGruppiScreen
 
@@ -52,8 +53,15 @@ fun AppNavigation(
             arguments = listOf(navArgument("gruppoId") { type = NavType.StringType })
         ) { backStackEntry ->
             val gruppoId = backStackEntry.arguments?.getString("gruppoId") ?: return@composable
-            // TODO step 5: DashboardScreen
-            Text("Dashboard — $gruppoId")
+            DashboardScreen(
+                gruppoId           = gruppoId,
+                onNavigateBack     = { navController.popBackStack() },
+                onApriSpese        = { id -> navController.navigate(Screen.Spese.withId(id)) },
+                onApriEntrate      = { id -> navController.navigate(Screen.Entrate.withId(id)) },
+                onApriSaldi        = { id -> navController.navigate(Screen.Saldi.withId(id)) },
+                onApriDebiti       = { id -> navController.navigate(Screen.Debiti.withId(id)) },
+                onApriImpostazioni = { id -> navController.navigate(Screen.ImpostazioniGruppo.withId(id)) },
+            )
         }
 
         // ── Spese ──────────────────────────────────────────────────────────────
