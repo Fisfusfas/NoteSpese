@@ -14,6 +14,7 @@ import com.app.notespese.ui.entrate.AggiungiEntrataScreen
 import com.app.notespese.ui.entrate.EntrataScreen
 import com.app.notespese.ui.gruppi.CreaGruppoScreen
 import com.app.notespese.ui.gruppi.ListaGruppiScreen
+import com.app.notespese.ui.gruppi.impostazioni.ImpostazioniGruppoScreen
 import com.app.notespese.ui.saldi.SaldoScreen
 import com.app.notespese.ui.spese.AggiungiSpesaScreen
 import com.app.notespese.ui.spese.SpesaScreen
@@ -179,7 +180,7 @@ fun AppNavigation(
             route     = Screen.ImpostazioniGruppo.route,
             arguments = listOf(navArgument("gruppoId") { type = NavType.StringType })
         ) {
-            Text("Impostazioni gruppo — placeholder")
+            ImpostazioniGruppoScreen(onNavigateBack = { navController.popBackStack() })
         }
     }
 }

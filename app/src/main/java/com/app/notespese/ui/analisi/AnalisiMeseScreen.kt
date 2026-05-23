@@ -35,6 +35,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -44,6 +45,17 @@ import com.app.notespese.ui.gruppi.parseColore
 import java.text.NumberFormat
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+
+private val PALETTE_PAGANTI = listOf(
+    Color(0xFF1565C0),
+    Color(0xFF2E7D32),
+    Color(0xFFE65100),
+    Color(0xFF6A1B9A),
+    Color(0xFF00838F),
+    Color(0xFFAD1457),
+)
+
+private fun colorePagante(idx: Int): Color = PALETTE_PAGANTI[idx % PALETTE_PAGANTI.size]
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -97,33 +109,53 @@ fun AnalisiMeseScreen(
                         )
                     }
                 } else {
+                    val fmt = NumberFormat.getCurrencyInstance(Locale.ITALY)
                     LazyColumn(
-                        modifier       = Modifier.fillMaxSize().padding(innerPadding),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                        modifier            = Modifier.fillMaxSize().padding(innerPadding),
+                        contentPadding      = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
-                        // ── Totale ─────────────────────────────────────────────────
+                        // ── Riepilogo totali ────────────────────────────────────
                         item {
                             Card(
                                 colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
-                                Row(
-                                    modifier              = Modifier.padding(16.dp).fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment     = Alignment.CenterVertically,
-                                ) {
-                                    Text("Totale del mese", style = MaterialTheme.typography.bodyLarge)
-                                    Text(
-                                        text       = NumberFormat.getCurrencyInstance(Locale.ITALY).format(state.totale),
-                                        style      = MaterialTheme.typography.titleLarge,
-                                        fontWeight = FontWeight.Bold,
-                                        color      = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    )
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Row(
+                                        modifier              = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment     = Alignment.CenterVertically,
+                                    ) {
+                                        Text("Spese del mese", style = MaterialTheme.typography.bodyMedium)
+                                        Text(
+                                            text       = fmt.format(state.totaleSpese),
+                                            style      = MaterialTheme.typography.titleLarge,
+                                            fontWeight = FontWeight.Bold,
+                                            color      = MaterialTheme.colorScheme.error,
+                                        )
+                                    }
+                                    if (state.totaleEntrate > 0) {
+                                        Spacer(Modifier.height(4.dp))
+                                        Row(
+                                            modifier              = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment     = Alignment.CenterVertically,
+                                        ) {
+                                            Text("Entrate del mese", style = MaterialTheme.typography.bodyMedium)
+                                            Text(
+                                                text       = fmt.format(state.totaleEntrate),
+                                                style      = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color      = Color(0xFF2E7D32),
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
 
+                        // ── Per categoria ───────────────────────────────────────
                         item {
                             Text(
                                 text  = "Per categoria",
@@ -131,10 +163,23 @@ fun AnalisiMeseScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
-
-                        // ── Per categoria ──────────────────────────────────────────
                         items(state.perCategoria) { cat ->
                             CardCategoria(cat = cat)
+                        }
+
+                        // ── Chi ha pagato (solo se >1 pagante distinto) ─────────
+                        if (state.perPagante.size > 1) {
+                            item { Spacer(Modifier.height(4.dp)) }
+                            item {
+                                Text(
+                                    text  = "Chi ha pagato",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            items(state.perPagante) { pagante ->
+                                CardPagante(pagante = pagante)
+                            }
                         }
                     }
                 }
@@ -163,10 +208,10 @@ private fun CardCategoria(cat: AnalisiMeseViewModel.CategoriaAnalisi) {
                 )
                 Spacer(Modifier.width(10.dp))
                 Text(
-                    text     = cat.nome,
-                    style    = MaterialTheme.typography.bodyLarge,
+                    text       = cat.nome,
+                    style      = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
-                    modifier = Modifier.weight(1f),
+                    modifier   = Modifier.weight(1f),
                 )
                 Text(
                     text       = NumberFormat.getCurrencyInstance(Locale.ITALY).format(cat.totale),
@@ -176,14 +221,63 @@ private fun CardCategoria(cat: AnalisiMeseViewModel.CategoriaAnalisi) {
             }
             Spacer(Modifier.height(8.dp))
             LinearProgressIndicator(
-                progress     = { cat.percentuale },
-                modifier     = Modifier.fillMaxWidth(),
-                color        = colore,
-                trackColor   = MaterialTheme.colorScheme.surfaceContainerHighest,
+                progress   = { cat.percentualeBar },
+                modifier   = Modifier.fillMaxWidth(),
+                color      = colore,
+                trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                text  = "${cat.nSpese} ${if (cat.nSpese == 1) "spesa" else "spese"}  ·  ${(cat.percentuale * 100).toInt()}% del totale",
+                text  = "${cat.nSpese} ${if (cat.nSpese == 1) "spesa" else "spese"}  ·  ${cat.percentualeLabel}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun CardPagante(pagante: AnalisiMeseViewModel.PaganteAnalisi) {
+    val colore = colorePagante(pagante.coloreIdx)
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+            Row(
+                modifier          = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(12.dp)
+                        .clip(CircleShape)
+                        .background(colore),
+                )
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    text       = pagante.nome,
+                    style      = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                    modifier   = Modifier.weight(1f),
+                )
+                Text(
+                    text       = NumberFormat.getCurrencyInstance(Locale.ITALY).format(pagante.totale),
+                    style      = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color      = colore,
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            LinearProgressIndicator(
+                progress   = { pagante.percentualeBar },
+                modifier   = Modifier.fillMaxWidth(),
+                color      = colore,
+                trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text  = "${pagante.nSpese} ${if (pagante.nSpese == 1) "spesa" else "spese"}  ·  ${(pagante.percentualeBar * 100).toInt()}% del tot. spese",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

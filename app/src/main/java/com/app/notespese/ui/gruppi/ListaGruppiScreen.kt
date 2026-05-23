@@ -33,8 +33,11 @@ import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material.icons.filled.Work
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -43,12 +46,18 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -72,6 +81,66 @@ fun ListaGruppiScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    // Naviga al gruppo dopo accettazione invito
+    LaunchedEffect(viewModel.invitoAccettato) {
+        viewModel.invitoAccettato?.let { gruppoId ->
+            onApriGruppo(gruppoId)
+            viewModel.resetInvito()
+        }
+    }
+
+    var showInvitoDialog by rememberSaveable { mutableStateOf(false) }
+    var codiceInput      by rememberSaveable { mutableStateOf("") }
+
+    if (showInvitoDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showInvitoDialog = false
+                codiceInput = ""
+                viewModel.resetInvito()
+            },
+            title = { Text("Entra con codice invito") },
+            text  = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text  = "Inserisci il codice a 8 caratteri che ti è stato condiviso.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    OutlinedTextField(
+                        value         = codiceInput,
+                        onValueChange = { codiceInput = it.uppercase().take(8) },
+                        label         = { Text("Codice invito") },
+                        placeholder   = { Text("es. AB3C9XYZ") },
+                        singleLine    = true,
+                        modifier      = Modifier.fillMaxWidth(),
+                        isError       = viewModel.erroreInvito != null,
+                        supportingText = viewModel.erroreInvito?.let { { Text(it) } },
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick  = { viewModel.entraConCodice(codiceInput) },
+                    enabled  = codiceInput.length == 8 && !viewModel.cercandoInvito,
+                ) {
+                    if (viewModel.cercandoInvito) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        Spacer(Modifier.width(6.dp))
+                    }
+                    Text("Entra")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showInvitoDialog = false
+                    codiceInput = ""
+                    viewModel.resetInvito()
+                }) { Text("Annulla") }
+            },
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -90,6 +159,13 @@ fun ListaGruppiScreen(
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 ),
                 actions = {
+                    IconButton(onClick = { showInvitoDialog = true }) {
+                        Icon(
+                            imageVector        = Icons.Default.VpnKey,
+                            contentDescription = "Entra con codice",
+                            tint               = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
+                    }
                     IconButton(onClick = onSignOut) {
                         Icon(
                             imageVector        = Icons.Default.Logout,
