@@ -67,11 +67,10 @@ class SpeseWidget : GlanceAppWidget() {
                 .whereArrayContains("membroIds", userId)
                 .get().await().documents
 
-            val gruppoDoc = if (savedGruppoId.isNotEmpty())
+            val gruppoDoc = (if (savedGruppoId.isNotEmpty())
                 gruppiDocs.find { it.id == savedGruppoId } ?: gruppiDocs.firstOrNull()
             else
-                gruppiDocs.firstOrNull()
-            ?: return WidgetData()
+                gruppiDocs.firstOrNull()) ?: return WidgetData()
 
             val gruppoId   = gruppoDoc.id
             val nomeGruppo = gruppoDoc.getString("nome") ?: ""
