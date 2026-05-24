@@ -145,14 +145,19 @@ data class WidgetData(
 
 @Composable
 private fun WidgetContent(context: Context, data: WidgetData) {
-    val fmt       = NumberFormat.getCurrencyInstance(Locale.ITALY)
-    val rosso     = Color(0xFFB71C1C)
-    val verde     = Color(0xFF1B5E20)
-    val surface   = Color(0xFFF5F5F5)
-    val hint      = Color(0xFF757575)
-    val divider   = Color(0xFFE0E0E0)
-    val primary   = Color(0xFF1565C0)
-    val onPrimary = Color.White
+    val fmt = NumberFormat.getCurrencyInstance(Locale.ITALY)
+    val isDark = (context.resources.configuration.uiMode and
+            android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+            android.content.res.Configuration.UI_MODE_NIGHT_YES
+
+    val surface   = if (isDark) Color(0xFF1E1E1E) else Color(0xFFF5F5F5)
+    val onSurface = if (isDark) Color(0xFFE0E0E0) else Color(0xFF212121)
+    val hint      = if (isDark) Color(0xFF9E9E9E) else Color(0xFF757575)
+    val divider   = if (isDark) Color(0xFF2C2C2C) else Color(0xFFE0E0E0)
+    val primary   = if (isDark) Color(0xFF90CAF9) else Color(0xFF1565C0)
+    val onPrimary = if (isDark) Color(0xFF0D1B2A) else Color.White
+    val rosso     = if (isDark) Color(0xFFEF9A9A) else Color(0xFFB71C1C)
+    val verde     = if (isDark) Color(0xFFA5D6A7) else Color(0xFF1B5E20)
 
     val openIntent = if (data.gruppoId.isNotEmpty()) {
         Intent(context, QuickSpesaActivity::class.java).apply {
@@ -197,7 +202,7 @@ private fun WidgetContent(context: Context, data: WidgetData) {
 
         Text(
             text     = data.nomeGruppo,
-            style    = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold),
+            style    = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold, color = ColorProvider(onSurface)),
             modifier = GlanceModifier.padding(top = 2.dp, bottom = 8.dp),
         )
 
@@ -234,7 +239,7 @@ private fun WidgetContent(context: Context, data: WidgetData) {
                 )
             } else {
                 data.perCategoria.forEach { cat ->
-                    RigaCategoria(cat = cat, fmt = fmt, hint = hint, rosso = rosso)
+                    RigaCategoria(cat = cat, fmt = fmt, hint = hint, rosso = rosso, onSurface = onSurface)
                     Spacer(GlanceModifier.height(5.dp))
                 }
             }
@@ -272,6 +277,7 @@ private fun RigaCategoria(
     fmt: NumberFormat,
     hint: Color,
     rosso: Color,
+    onSurface: Color,
 ) {
     val colore = try {
         Color(android.graphics.Color.parseColor(cat.colore))
@@ -287,12 +293,12 @@ private fun RigaCategoria(
         Box(
             modifier = GlanceModifier
                 .size(8.dp)
-                .background(if (superaBudget) Color(0xFFB71C1C) else colore),
+                .background(if (superaBudget) rosso else colore),
         ) {}
         Spacer(GlanceModifier.width(6.dp))
         Text(
             text     = cat.nome,
-            style    = TextStyle(fontSize = 12.sp),
+            style    = TextStyle(fontSize = 12.sp, color = ColorProvider(onSurface)),
             modifier = GlanceModifier.defaultWeight(),
         )
         Text(
@@ -302,7 +308,7 @@ private fun RigaCategoria(
                 fmt.format(cat.totale),
             style = TextStyle(
                 fontSize   = 11.sp,
-                color      = ColorProvider(if (superaBudget) Color(0xFFB71C1C) else Color(0xFF424242)),
+                color      = ColorProvider(if (superaBudget) rosso else onSurface),
                 fontWeight = if (superaBudget) FontWeight.Bold else FontWeight.Medium,
             ),
         )
