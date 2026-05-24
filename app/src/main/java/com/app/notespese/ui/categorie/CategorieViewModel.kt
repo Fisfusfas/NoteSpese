@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.notespese.data.model.Budget
 import com.app.notespese.data.model.Categoria
+import com.app.notespese.data.model.TipoCategoria
 import com.app.notespese.data.repository.BudgetRepository
 import com.app.notespese.data.repository.CategoriaRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -57,14 +58,16 @@ class CategorieViewModel @Inject constructor(
     var dialogNome         by mutableStateOf("")
     var dialogColore       by mutableStateOf("#1565C0")
     var dialogBudget       by mutableStateOf("")
+    var dialogTipo         by mutableStateOf(TipoCategoria.SPESA.name)
     var salvando           by mutableStateOf(false)
     var errore             by mutableStateOf<String?>(null)
 
-    fun apriAggiungi() {
+    fun apriAggiungi(defaultTipo: String = TipoCategoria.SPESA.name) {
         editCategoria = null
         dialogNome    = ""
         dialogColore  = "#1565C0"
         dialogBudget  = ""
+        dialogTipo    = defaultTipo
         errore        = null
         showDialog    = true
     }
@@ -74,6 +77,7 @@ class CategorieViewModel @Inject constructor(
         dialogNome    = riga.categoria.nome
         dialogColore  = riga.categoria.colore
         dialogBudget  = if (riga.budgetMensile > 0) riga.budgetMensile.toString() else ""
+        dialogTipo    = riga.categoria.tipo
         errore        = null
         showDialog    = true
     }
@@ -93,7 +97,7 @@ class CategorieViewModel @Inject constructor(
             val result = if (cat == null) {
                 categoriaRepository.aggiungiCategoria(
                     gruppoId,
-                    Categoria(nome = dialogNome.trim(), colore = dialogColore),
+                    Categoria(nome = dialogNome.trim(), colore = dialogColore, tipo = dialogTipo),
                 ).also { r ->
                     r.getOrNull()?.let { newId ->
                         if (budgetImporto > 0)
@@ -103,7 +107,7 @@ class CategorieViewModel @Inject constructor(
             } else {
                 categoriaRepository.aggiornaCategoria(
                     gruppoId,
-                    cat.copy(nome = dialogNome.trim(), colore = dialogColore),
+                    cat.copy(nome = dialogNome.trim(), colore = dialogColore, tipo = dialogTipo),
                 ).also {
                     if (budgetImporto > 0) {
                         budgetRepository.impostaBudget(gruppoId, Budget(id = cat.id, importoMensile = budgetImporto))

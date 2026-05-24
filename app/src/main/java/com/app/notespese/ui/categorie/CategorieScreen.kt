@@ -2,6 +2,7 @@ package com.app.notespese.ui.categorie
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -32,14 +33,22 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,6 +58,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.app.notespese.data.model.TipoCategoria
 import com.app.notespese.ui.gruppi.parseColore
 import java.text.NumberFormat
 import java.util.Locale
@@ -58,6 +68,8 @@ private val PALETTE_COLORI = listOf(
     "#00838F", "#AD1457", "#F9A825", "#37474F",
 )
 
+private val TABS = listOf("Spese", "Entrate")
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CategorieScreen(
@@ -66,6 +78,7 @@ fun CategorieScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val fmt = NumberFormat.getCurrencyInstance(Locale.ITALY)
+    var selectedTab by rememberSaveable { mutableIntStateOf(0) }
 
     // ── Dialog add/edit ────────────────────────────────────────────────────────
     if (viewModel.showDialog) {
@@ -73,7 +86,26 @@ fun CategorieScreen(
             onDismissRequest = viewModel::chiudiDialog,
             title   = { Text(if (viewModel.editCategoria == null) "Nuova categoria" else "Modifica categoria") },
             text    = {
-                Column {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    // Tipo (Spesa / Entrambi / Entrata)
+                    Text("Tipo", style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                        val tipi = listOf(
+                            TipoCategoria.SPESA.name    to "Spesa",
+                            TipoCategoria.ENTRAMBI.name to "Entrambi",
+                            TipoCategoria.ENTRATA.name  to "Entrata",
+                        )
+                        tipi.forEachIndexed { idx, (value, label) ->
+                            SegmentedButton(
+                                selected = viewModel.dialogTipo == value,
+                                onClick  = { viewModel.dialogTipo = value; viewModel.errore = null },
+                                shape    = SegmentedButtonDefaults.itemShape(idx, tipi.size),
+                                label    = { Text(label, style = MaterialTheme.typography.labelSmall) },
+                            )
+                        }
+                    }
+
                     OutlinedTextField(
                         value         = viewModel.dialogNome,
                         onValueChange = { viewModel.dialogNome = it; viewModel.errore = null },
@@ -86,23 +118,26 @@ fun CategorieScreen(
                         Text(viewModel.errore!!, color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.bodySmall)
                     }
-                    Spacer(Modifier.height(10.dp))
-                    OutlinedTextField(
-                        value           = viewModel.dialogBudget,
-                        onValueChange   = { viewModel.dialogBudget = it; viewModel.errore = null },
-                        label           = { Text("Budget mensile (€, opzionale)") },
-                        prefix          = { Text("€") },
-                        singleLine      = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        modifier        = Modifier.fillMaxWidth(),
-                    )
-                    Spacer(Modifier.height(12.dp))
+
+                    // Budget (solo per categorie di spesa)
+                    if (viewModel.dialogTipo != TipoCategoria.ENTRATA.name) {
+                        OutlinedTextField(
+                            value           = viewModel.dialogBudget,
+                            onValueChange   = { viewModel.dialogBudget = it; viewModel.errore = null },
+                            label           = { Text("Budget mensile (€, opzionale)") },
+                            prefix          = { Text("€") },
+                            singleLine      = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            modifier        = Modifier.fillMaxWidth(),
+                        )
+                    }
+
+                    // Colore
                     Text("Colore", style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(Modifier.height(8.dp))
-                    LazyRow(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(PALETTE_COLORI) { hex ->
-                            val colore = parseColore(hex)
+                            val colore   = parseColore(hex)
                             val selected = hex == viewModel.dialogColore
                             Box(
                                 modifier = Modifier
@@ -142,40 +177,67 @@ fun CategorieScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = viewModel::apriAggiungi) {
+            FloatingActionButton(onClick = {
+                viewModel.apriAggiungi(
+                    if (selectedTab == 0) TipoCategoria.SPESA.name else TipoCategoria.ENTRATA.name
+                )
+            }) {
                 Icon(Icons.Default.Add, contentDescription = "Aggiungi categoria")
             }
         },
     ) { innerPadding ->
-        when (val state = uiState) {
-            is CategorieViewModel.UiState.Caricamento ->
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-            is CategorieViewModel.UiState.Errore ->
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(state.messaggio, color = MaterialTheme.colorScheme.error)
+        Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+            // ── Tabs ────────────────────────────────────────────────────────────
+            TabRow(selectedTabIndex = selectedTab) {
+                TABS.forEachIndexed { idx, title ->
+                    Tab(
+                        selected = selectedTab == idx,
+                        onClick  = { selectedTab = idx },
+                        text     = { Text(title) },
+                    )
                 }
-            is CategorieViewModel.UiState.Successo -> {
-                if (state.righe.isEmpty()) {
-                    Box(Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
-                        Text(
-                            text      = "Nessuna categoria.\nPremi + per aggiungerne una.",
-                            style     = MaterialTheme.typography.bodyMedium,
-                            color     = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
-                        )
+            }
+
+            // ── Content ─────────────────────────────────────────────────────────
+            when (val state = uiState) {
+                is CategorieViewModel.UiState.Caricamento ->
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                is CategorieViewModel.UiState.Errore ->
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(state.messaggio, color = MaterialTheme.colorScheme.error)
                     }
-                } else {
-                    LazyColumn(
-                        modifier       = Modifier.fillMaxSize().padding(innerPadding),
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 88.dp),
-                    ) {
-                        items(state.righe, key = { it.categoria.id }) { riga ->
-                            CategoriaSwipeItem(
-                                riga      = riga,
-                                fmt       = fmt,
-                                onModifica = { viewModel.apriModifica(riga) },
-                                onDelete  = { viewModel.elimina(riga.categoria.id) },
+                is CategorieViewModel.UiState.Successo -> {
+                    val tipiVisibili = if (selectedTab == 0)
+                        setOf(TipoCategoria.SPESA.name, TipoCategoria.ENTRAMBI.name)
+                    else
+                        setOf(TipoCategoria.ENTRATA.name, TipoCategoria.ENTRAMBI.name)
+
+                    val righe = state.righe.filter { it.categoria.tipo in tipiVisibili }
+
+                    if (righe.isEmpty()) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text(
+                                text      = "Nessuna categoria.\nPremi + per aggiungerne una.",
+                                style     = MaterialTheme.typography.bodyMedium,
+                                color     = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                                modifier  = Modifier.padding(32.dp),
                             )
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier       = Modifier.fillMaxSize(),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 88.dp),
+                        ) {
+                            items(righe, key = { it.categoria.id }) { riga ->
+                                CategoriaSwipeItem(
+                                    riga      = riga,
+                                    fmt       = fmt,
+                                    showBudget = selectedTab == 0,
+                                    onModifica = { viewModel.apriModifica(riga) },
+                                    onDelete  = { viewModel.elimina(riga.categoria.id) },
+                                )
+                            }
                         }
                     }
                 }
@@ -189,6 +251,7 @@ fun CategorieScreen(
 private fun CategoriaSwipeItem(
     riga: CategorieViewModel.RigaCategoria,
     fmt: java.text.NumberFormat,
+    showBudget: Boolean,
     onModifica: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -215,14 +278,31 @@ private fun CategoriaSwipeItem(
             }
         },
     ) {
+        val chipLabel = when (riga.categoria.tipo) {
+            TipoCategoria.ENTRAMBI.name -> "Spese & Entrate"
+            else -> null
+        }
         ListItem(
-            headlineContent  = { Text(riga.categoria.nome) },
+            headlineContent  = {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(riga.categoria.nome)
+                    if (chipLabel != null) {
+                        Text(
+                            text  = chipLabel,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
+            },
             supportingContent = {
-                if (riga.budgetMensile > 0)
-                    Text("Budget: ${fmt.format(riga.budgetMensile)}", style = MaterialTheme.typography.bodySmall)
-                else
-                    Text("Nessun budget", style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (showBudget) {
+                    if (riga.budgetMensile > 0)
+                        Text("Budget: ${fmt.format(riga.budgetMensile)}", style = MaterialTheme.typography.bodySmall)
+                    else
+                        Text("Nessun budget", style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             },
             leadingContent   = {
                 Box(
