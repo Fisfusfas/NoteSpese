@@ -98,7 +98,7 @@ fun ProfiloScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text  = (utente?.nome?.firstOrNull() ?: "?").uppercaseChar().toString(),
+                        text  = (utente?.nome?.firstOrNull() ?: '?').uppercaseChar().toString(),
                         style = MaterialTheme.typography.headlineLarge,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                     )
