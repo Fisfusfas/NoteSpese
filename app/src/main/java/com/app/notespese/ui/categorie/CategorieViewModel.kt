@@ -57,6 +57,7 @@ class CategorieViewModel @Inject constructor(
     var editCategoria      by mutableStateOf<Categoria?>(null)
     var dialogNome         by mutableStateOf("")
     var dialogColore       by mutableStateOf("#1565C0")
+    var dialogIcona        by mutableStateOf("label")
     var dialogBudget       by mutableStateOf("")
     var dialogTipo         by mutableStateOf(TipoCategoria.SPESA.name)
     var salvando           by mutableStateOf(false)
@@ -66,6 +67,7 @@ class CategorieViewModel @Inject constructor(
         editCategoria = null
         dialogNome    = ""
         dialogColore  = "#1565C0"
+        dialogIcona   = "label"
         dialogBudget  = ""
         dialogTipo    = defaultTipo
         errore        = null
@@ -76,6 +78,7 @@ class CategorieViewModel @Inject constructor(
         editCategoria = riga.categoria
         dialogNome    = riga.categoria.nome
         dialogColore  = riga.categoria.colore
+        dialogIcona   = riga.categoria.icona
         dialogBudget  = if (riga.budgetMensile > 0) riga.budgetMensile.toString() else ""
         dialogTipo    = riga.categoria.tipo
         errore        = null
@@ -97,7 +100,7 @@ class CategorieViewModel @Inject constructor(
             val result = if (cat == null) {
                 categoriaRepository.aggiungiCategoria(
                     gruppoId,
-                    Categoria(nome = dialogNome.trim(), colore = dialogColore, tipo = dialogTipo),
+                    Categoria(nome = dialogNome.trim(), colore = dialogColore, icona = dialogIcona, tipo = dialogTipo),
                 ).also { r ->
                     r.getOrNull()?.let { newId ->
                         if (budgetImporto > 0)
@@ -107,7 +110,7 @@ class CategorieViewModel @Inject constructor(
             } else {
                 categoriaRepository.aggiornaCategoria(
                     gruppoId,
-                    cat.copy(nome = dialogNome.trim(), colore = dialogColore, tipo = dialogTipo),
+                    cat.copy(nome = dialogNome.trim(), colore = dialogColore, icona = dialogIcona, tipo = dialogTipo),
                 ).also {
                     if (budgetImporto > 0) {
                         budgetRepository.impostaBudget(gruppoId, Budget(id = cat.id, importoMensile = budgetImporto))

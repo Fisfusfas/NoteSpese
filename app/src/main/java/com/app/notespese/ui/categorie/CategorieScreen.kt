@@ -59,6 +59,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.app.notespese.data.model.TipoCategoria
+import com.app.notespese.ui.common.ICONE_CATEGORIA
+import com.app.notespese.ui.common.iconaCategoria
 import com.app.notespese.ui.gruppi.parseColore
 import java.text.NumberFormat
 import java.util.Locale
@@ -150,6 +152,34 @@ fun CategorieScreen(
                                 if (selected) {
                                     Box(Modifier.size(14.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.7f)))
                                 }
+                            }
+                        }
+                    }
+
+                    // Icona
+                    Text("Icona", style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(ICONE_CATEGORIA) { (nome, icona) ->
+                            val selected = nome == viewModel.dialogIcona
+                            val colore   = parseColore(viewModel.dialogColore)
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (selected) colore.copy(alpha = 0.25f)
+                                        else MaterialTheme.colorScheme.surfaceVariant
+                                    )
+                                    .clickable { viewModel.dialogIcona = nome },
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    imageVector        = icona,
+                                    contentDescription = nome,
+                                    tint               = if (selected) colore else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier           = Modifier.size(20.dp),
+                                )
                             }
                         }
                     }
@@ -305,9 +335,18 @@ private fun CategoriaSwipeItem(
                 }
             },
             leadingContent   = {
+                val colore = parseColore(riga.categoria.colore)
                 Box(
-                    modifier = Modifier.size(24.dp).clip(CircleShape).background(parseColore(riga.categoria.colore))
-                )
+                    modifier         = Modifier.size(36.dp).clip(CircleShape).background(colore.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector        = iconaCategoria(riga.categoria.icona),
+                        contentDescription = null,
+                        tint               = colore,
+                        modifier           = Modifier.size(20.dp),
+                    )
+                }
             },
             modifier         = Modifier.background(MaterialTheme.colorScheme.surface).clickable(onClick = onModifica),
         )

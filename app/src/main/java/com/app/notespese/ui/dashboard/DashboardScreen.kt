@@ -308,7 +308,7 @@ private fun DashboardContent(
                         )
                         CardNavigazione(
                             modifier  = Modifier.weight(1f),
-                            etichetta = "Grafici",
+                            etichetta = "Statistiche",
                             icona     = Icons.Default.BarChart,
                             colore    = Color(0xFF00838F),
                             onClick   = onApriGrafici,

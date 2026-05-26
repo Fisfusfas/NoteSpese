@@ -14,7 +14,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Label
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -37,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import com.app.notespese.data.model.Categoria
 import com.app.notespese.ui.gruppi.COLORI_GRUPPO
 import com.app.notespese.ui.gruppi.parseColore
+import com.app.notespese.ui.common.iconaCategoria
 
 @Composable
 fun CategoriaSelector(
@@ -69,7 +69,7 @@ fun CategoriaSelector(
                         if (selezionata) {
                             Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(FilterChipDefaults.IconSize))
                         } else {
-                            Icon(Icons.Default.Label, contentDescription = null, modifier = Modifier.size(FilterChipDefaults.IconSize),
+                            Icon(iconaCategoria(cat.icona), contentDescription = null, modifier = Modifier.size(FilterChipDefaults.IconSize),
                                 tint = parseColore(cat.colore))
                         }
                     },

@@ -35,10 +35,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.SuggestionChipDefaults
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -55,11 +58,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.app.notespese.data.model.Membro
 import com.app.notespese.data.model.Spesa
+import com.app.notespese.data.model.TipoSpesa
 import com.app.notespese.ui.gruppi.parseColore
 import java.text.NumberFormat
 import java.time.Instant
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeFormatter.ofPattern
 import java.util.Locale
 
@@ -103,118 +106,17 @@ fun AnalisiMeseScreen(
                     Text(state.messaggio, color = MaterialTheme.colorScheme.error)
                 }
             is AnalisiMeseViewModel.UiState.Successo -> {
-                if (state.perCategoria.isEmpty()) {
-                    Box(
-                        modifier         = Modifier.fillMaxSize().padding(innerPadding),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text      = "Nessuna spesa per questo mese.",
-                            style     = MaterialTheme.typography.bodyMedium,
-                            color     = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
-                            modifier  = Modifier.padding(32.dp),
-                        )
+                var selectedTab by rememberSaveable { mutableIntStateOf(0) }
+
+                Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+                    TabRow(selectedTabIndex = selectedTab) {
+                        Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text("Condivise") })
+                        Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("Personali") })
                     }
-                } else {
-                    val fmt = NumberFormat.getCurrencyInstance(Locale.ITALY)
-                    // UI-only state: which category card is expanded
-                    var expandedCatId by rememberSaveable { mutableStateOf<String?>(null) }
 
-                    LazyColumn(
-                        modifier            = Modifier.fillMaxSize().padding(innerPadding),
-                        contentPadding      = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        // ── Riepilogo totali ────────────────────────────────────
-                        item {
-                            Card(
-                                colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                Column(modifier = Modifier.padding(16.dp)) {
-                                    Row(
-                                        modifier              = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment     = Alignment.CenterVertically,
-                                    ) {
-                                        Text("Spese del mese", style = MaterialTheme.typography.bodyMedium)
-                                        Text(
-                                            text       = fmt.format(state.totaleSpese),
-                                            style      = MaterialTheme.typography.titleLarge,
-                                            fontWeight = FontWeight.Bold,
-                                            color      = MaterialTheme.colorScheme.error,
-                                        )
-                                    }
-                                    if (state.totaleEntrate > 0) {
-                                        Spacer(Modifier.height(4.dp))
-                                        Row(
-                                            modifier              = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment     = Alignment.CenterVertically,
-                                        ) {
-                                            Text("Entrate del mese", style = MaterialTheme.typography.bodyMedium)
-                                            Text(
-                                                text       = fmt.format(state.totaleEntrate),
-                                                style      = MaterialTheme.typography.titleMedium,
-                                                fontWeight = FontWeight.SemiBold,
-                                                color      = Color(0xFF2E7D32),
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        // ── Per categoria ───────────────────────────────────────
-                        item {
-                            Text(
-                                text  = "Per categoria",
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        items(state.perCategoria, key = { it.categoriaId }) { cat ->
-                            val isExpanded = expandedCatId == cat.categoriaId
-                            val speseCategoria = remember(cat.categoriaId, state.spese) {
-                                state.spese
-                                    .filter { it.categoriaId == cat.categoriaId }
-                                    .sortedByDescending { it.data?.seconds ?: 0 }
-                            }
-                            CardCategoria(
-                                cat        = cat,
-                                isExpanded = isExpanded,
-                                onClick    = {
-                                    expandedCatId = if (isExpanded) null else cat.categoriaId
-                                },
-                            )
-                            AnimatedVisibility(visible = isExpanded) {
-                                Column(
-                                    modifier            = Modifier.padding(start = 8.dp),
-                                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                                ) {
-                                    Spacer(Modifier.height(2.dp))
-                                    speseCategoria.forEach { spesa ->
-                                        RigaSpesaDettaglio(spesa = spesa, membri = state.membri)
-                                    }
-                                }
-                            }
-                        }
-
-                        // ── Chi ha pagato (solo se >1 pagante) ──────────────────
-                        if (state.perPagante.size > 1) {
-                            item { Spacer(Modifier.height(4.dp)) }
-                            item {
-                                Text(
-                                    text  = "Chi ha pagato",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                            items(state.perPagante) { pagante ->
-                                CardPagante(pagante = pagante)
-                            }
-                        }
+                    when (selectedTab) {
+                        0 -> TabCondivise(state = state)
+                        1 -> TabPersonali(state = state)
                     }
                 }
             }
@@ -222,14 +124,346 @@ fun AnalisiMeseScreen(
     }
 }
 
+// ── Tab Condivise ──────────────────────────────────────────────────────────────
+
+@Composable
+private fun TabCondivise(state: AnalisiMeseViewModel.UiState.Successo) {
+    val spese  = remember(state.spese) { state.spese.filter { it.condivisa } }
+    val totale = remember(spese) { spese.sumOf { it.importo } }
+    val fmt    = NumberFormat.getCurrencyInstance(Locale.ITALY)
+
+    if (spese.isEmpty()) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(
+                text      = "Nessuna spesa condivisa questo mese.",
+                style     = MaterialTheme.typography.bodyMedium,
+                color     = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier  = Modifier.padding(32.dp),
+            )
+        }
+        return
+    }
+
+    var expandedCatId by rememberSaveable { mutableStateOf<String?>(null) }
+
+    val perCategoria = remember(spese) {
+        spese.groupBy { it.categoriaId }.map { (catId, gruppo) ->
+            catId to gruppo
+        }.sortedByDescending { it.second.sumOf { s -> s.importo } }
+    }
+
+    val perPagante = remember(spese) {
+        spese.filter { it.pagante.isNotBlank() }
+            .groupBy { it.pagante }
+            .map { (userId, gruppo) -> userId to gruppo }
+            .sortedByDescending { it.second.sumOf { s -> s.importo } }
+    }
+
+    val totaleFisse    = remember(spese) { spese.filter { it.tipo == TipoSpesa.FISSA.name }.sumOf { it.importo } }
+    val totaleVariabili = remember(spese) { spese.filter { it.tipo != TipoSpesa.FISSA.name }.sumOf { it.importo } }
+    val nFisse         = remember(spese) { spese.count { it.tipo == TipoSpesa.FISSA.name } }
+    val nVariabili     = remember(spese) { spese.count { it.tipo != TipoSpesa.FISSA.name } }
+
+    LazyColumn(
+        modifier            = Modifier.fillMaxSize(),
+        contentPadding      = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        // Riepilogo
+        item {
+            RiepilogoCard(totaleSpese = totale, totaleEntrate = state.totaleEntrate, fmt = fmt)
+        }
+
+        // Per categoria
+        item {
+            Text("Per categoria", style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        items(perCategoria, key = { it.first }) { (catId, gruppo) ->
+            val cat = state.perCategoria.find { it.categoriaId == catId }
+            if (cat != null) {
+                val isExpanded = expandedCatId == catId
+                CardCategoria(
+                    cat        = cat,
+                    isExpanded = isExpanded,
+                    onClick    = { expandedCatId = if (isExpanded) null else catId },
+                )
+                AnimatedVisibility(visible = isExpanded) {
+                    Column(
+                        modifier            = Modifier.padding(start = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Spacer(Modifier.height(2.dp))
+                        gruppo.sortedByDescending { it.data?.seconds ?: 0 }.forEach { spesa ->
+                            RigaSpesaDettaglio(spesa = spesa, membri = state.membri)
+                        }
+                    }
+                }
+            }
+        }
+
+        // Chi ha pagato
+        if (perPagante.size > 1) {
+            item { Spacer(Modifier.height(4.dp)) }
+            item {
+                Text("Chi ha pagato", style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            items(perPagante.mapIndexed { idx, (userId, gruppo) ->
+                val membro = state.membri.find { it.userId == userId }
+                val nome   = membro?.nominativoLocale?.ifBlank { null } ?: userId.take(8)
+                val tot    = gruppo.sumOf { it.importo }
+                val perc   = if (totale > 0) (tot / totale).toFloat() else 0f
+                AnalisiMeseViewModel.PaganteAnalisi(userId, nome, tot, gruppo.size, perc, idx)
+            }) { pagante ->
+                CardPagante(pagante = pagante)
+            }
+        }
+
+        // Fisse vs Variabili
+        item { Spacer(Modifier.height(4.dp)) }
+        item {
+            Text("Tipologia", style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        item {
+            CardTipologia(
+                totaleFisse     = totaleFisse,
+                totaleVariabili = totaleVariabili,
+                nFisse          = nFisse,
+                nVariabili      = nVariabili,
+                totaleTot       = totale,
+                fmt             = fmt,
+            )
+        }
+    }
+}
+
+// ── Tab Personali ──────────────────────────────────────────────────────────────
+
+@Composable
+private fun TabPersonali(state: AnalisiMeseViewModel.UiState.Successo) {
+    val spese = remember(state.spese) { state.spese.filter { !it.condivisa } }
+    val fmt   = NumberFormat.getCurrencyInstance(Locale.ITALY)
+
+    if (spese.isEmpty()) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(
+                text      = "Nessuna spesa personale questo mese.",
+                style     = MaterialTheme.typography.bodyMedium,
+                color     = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier  = Modifier.padding(32.dp),
+            )
+        }
+        return
+    }
+
+    val perPagante = remember(spese) {
+        spese.filter { it.pagante.isNotBlank() }
+            .groupBy { it.pagante }
+            .map { (userId, gruppo) ->
+                val membro = state.membri.find { it.userId == userId }
+                val nome   = membro?.nominativoLocale?.ifBlank { null } ?: userId.take(8)
+                userId to (nome to gruppo)
+            }
+            .sortedByDescending { it.second.second.sumOf { s -> s.importo } }
+    }
+
+    LazyColumn(
+        modifier            = Modifier.fillMaxSize(),
+        contentPadding      = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        perPagante.forEachIndexed { idx, (_, pair) ->
+            val (nome, gruppo) = pair
+            val totaleUtente   = gruppo.sumOf { it.importo }
+
+            item(key = "header_$idx") {
+                Row(
+                    modifier          = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Box(
+                        Modifier.size(10.dp).clip(CircleShape)
+                            .background(colorePagante(idx))
+                    )
+                    Text(
+                        text       = nome,
+                        style      = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color      = colorePagante(idx),
+                        modifier   = Modifier.weight(1f),
+                    )
+                    Text(
+                        text       = fmt.format(totaleUtente),
+                        style      = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color      = colorePagante(idx),
+                    )
+                }
+            }
+
+            // Per categoria dell'utente
+            val perCatUtente = gruppo.groupBy { it.categoriaId }
+                .map { (catId, ss) -> catId to ss }
+                .sortedByDescending { it.second.sumOf { s -> s.importo } }
+
+            items(perCatUtente, key = { "${idx}_${it.first}" }) { (catId, ss) ->
+                val catAnalisi = state.perCategoria.find { it.categoriaId == catId }
+                val nomecat    = catAnalisi?.nome ?: "Senza categoria"
+                val colorecat  = catAnalisi?.colore ?: "#9E9E9E"
+                val tot        = ss.sumOf { it.importo }
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                ) {
+                    Row(
+                        modifier          = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Box(Modifier.size(10.dp).clip(CircleShape).background(parseColore(colorecat)))
+                        Spacer(Modifier.width(8.dp))
+                        Text(nomecat, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f),
+                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(
+                            text       = fmt.format(tot),
+                            style      = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 14.dp))
+                    Column(modifier = Modifier.padding(start = 28.dp, end = 14.dp, bottom = 8.dp)) {
+                        ss.sortedByDescending { it.data?.seconds ?: 0 }.forEach { spesa ->
+                            RigaSpesaDettaglio(spesa = spesa, membri = state.membri)
+                            Spacer(Modifier.height(4.dp))
+                        }
+                    }
+                }
+            }
+
+            if (idx < perPagante.size - 1) {
+                item(key = "div_$idx") { Spacer(Modifier.height(8.dp)) }
+            }
+        }
+    }
+}
+
+// ── Card tipologia fissa/variabile ─────────────────────────────────────────────
+
+@Composable
+private fun CardTipologia(
+    totaleFisse: Double,
+    totaleVariabili: Double,
+    nFisse: Int,
+    nVariabili: Int,
+    totaleTot: Double,
+    fmt: NumberFormat,
+) {
+    val percFisse     = if (totaleTot > 0) (totaleFisse / totaleTot).toFloat() else 0f
+    val percVariabili = if (totaleTot > 0) (totaleVariabili / totaleTot).toFloat() else 0f
+    val coloreFissa    = MaterialTheme.colorScheme.tertiary
+    val coloreVariabile = MaterialTheme.colorScheme.secondary
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(
+                modifier          = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Box(Modifier.size(10.dp).clip(CircleShape).background(coloreFissa))
+                Text("Fisse", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                Text("$nFisse op.", style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(fmt.format(totaleFisse), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            }
+            LinearProgressIndicator(
+                progress   = { percFisse },
+                modifier   = Modifier.fillMaxWidth(),
+                color      = coloreFissa,
+                trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+            )
+            Row(
+                modifier          = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Box(Modifier.size(10.dp).clip(CircleShape).background(coloreVariabile))
+                Text("Variabili", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                Text("$nVariabili op.", style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(fmt.format(totaleVariabili), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            }
+            LinearProgressIndicator(
+                progress   = { percVariabili },
+                modifier   = Modifier.fillMaxWidth(),
+                color      = coloreVariabile,
+                trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+            )
+        }
+    }
+}
+
+// ── Riepilogo card ─────────────────────────────────────────────────────────────
+
+@Composable
+private fun RiepilogoCard(totaleSpese: Double, totaleEntrate: Double, fmt: NumberFormat) {
+    Card(
+        colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier              = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment     = Alignment.CenterVertically,
+            ) {
+                Text("Spese condivise", style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    text       = fmt.format(totaleSpese),
+                    style      = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color      = MaterialTheme.colorScheme.error,
+                )
+            }
+            if (totaleEntrate > 0) {
+                Spacer(Modifier.height(4.dp))
+                Row(
+                    modifier              = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment     = Alignment.CenterVertically,
+                ) {
+                    Text("Entrate del mese", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        text       = fmt.format(totaleEntrate),
+                        style      = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color      = Color(0xFF2E7D32),
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ── Card categoria ─────────────────────────────────────────────────────────────
+
 @Composable
 private fun CardCategoria(
     cat: AnalisiMeseViewModel.CategoriaAnalisi,
     isExpanded: Boolean,
     onClick: () -> Unit,
 ) {
-    val colore      = parseColore(cat.colore)
-    val barColor    = if (cat.superaBudget) MaterialTheme.colorScheme.error else colore
+    val colore   = parseColore(cat.colore)
+    val barColor = if (cat.superaBudget) MaterialTheme.colorScheme.error else colore
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
@@ -288,6 +522,8 @@ private fun CardCategoria(
     }
 }
 
+// ── Riga spesa dettaglio ───────────────────────────────────────────────────────
+
 @Composable
 private fun RigaSpesaDettaglio(spesa: Spesa, membri: List<Membro>) {
     val dataLabel = remember(spesa.data) {
@@ -329,12 +565,12 @@ private fun RigaSpesaDettaglio(spesa: Spesa, membri: List<Membro>) {
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    if (!spesa.condivisa) {
+                    if (spesa.tipo == TipoSpesa.FISSA.name) {
                         SuggestionChip(
                             onClick = {},
-                            label   = { Text("Personale", style = MaterialTheme.typography.labelSmall) },
+                            label   = { Text("Fissa", style = MaterialTheme.typography.labelSmall) },
                             colors  = SuggestionChipDefaults.suggestionChipColors(
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f),
+                                containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f),
                             ),
                             modifier = Modifier.height(18.dp),
                         )
@@ -358,6 +594,8 @@ private fun RigaSpesaDettaglio(spesa: Spesa, membri: List<Membro>) {
         }
     }
 }
+
+// ── Card pagante ───────────────────────────────────────────────────────────────
 
 @Composable
 private fun CardPagante(pagante: AnalisiMeseViewModel.PaganteAnalisi) {

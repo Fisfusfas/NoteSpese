@@ -77,7 +77,7 @@ fun AppNavigation(
                 onApriEntrate        = { id -> navController.navigate(Screen.Entrate.withId(id)) },
                 onApriSaldi          = { id -> navController.navigate(Screen.Saldi.withId(id)) },
                 onApriImpostazioni   = { id -> navController.navigate(Screen.ImpostazioniGruppo.withId(id)) },
-                onApriGrafici        = { id -> navController.navigate(Screen.Grafici.withId(id)) },
+                onApriGrafici        = { id -> navController.navigate(Screen.Statistiche.withId(id)) },
                 onApriAnalisi        = { gId, mese, anno ->
                     navController.navigate(Screen.AnalisiMese.withParams(gId, mese, anno))
                 },
@@ -221,9 +221,9 @@ fun AppNavigation(
             )
         }
 
-        // ── Grafici ────────────────────────────────────────────────────────────
+        // ── Statistiche ────────────────────────────────────────────────────────
         composable(
-            route     = Screen.Grafici.route,
+            route     = Screen.Statistiche.route,
             arguments = listOf(navArgument("gruppoId") { type = NavType.StringType })
         ) {
             GraficiScreen(onNavigateBack = { navController.popBackStack() })
