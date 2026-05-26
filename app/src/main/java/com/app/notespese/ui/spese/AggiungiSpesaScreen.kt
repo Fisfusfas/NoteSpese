@@ -23,6 +23,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -92,6 +93,20 @@ fun AggiungiSpesaScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+
+            // ── Importo rapido ─────────────────────────────────────────────────
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(5, 10, 20, 50, 100).forEach { amount ->
+                    FilterChip(
+                        selected = viewModel.importoText == amount.toString(),
+                        onClick  = {
+                            viewModel.importoText  = amount.toString()
+                            viewModel.erroreImporto = false
+                        },
+                        label    = { Text("€$amount") },
+                    )
+                }
+            }
 
             // ── Importo ────────────────────────────────────────────────────────
             OutlinedTextField(

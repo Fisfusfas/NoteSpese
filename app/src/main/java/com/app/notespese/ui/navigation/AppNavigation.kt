@@ -9,6 +9,7 @@ import androidx.navigation.navArgument
 import com.app.notespese.data.model.Utente
 import com.app.notespese.ui.analisi.AnalisiEntrateScreen
 import com.app.notespese.ui.analisi.AnalisiMeseScreen
+import com.app.notespese.ui.grafici.GraficiScreen
 import com.app.notespese.ui.categorie.CategorieScreen
 import com.app.notespese.ui.dashboard.DashboardScreen
 import com.app.notespese.ui.entrate.AggiungiEntrataScreen
@@ -76,6 +77,7 @@ fun AppNavigation(
                 onApriEntrate        = { id -> navController.navigate(Screen.Entrate.withId(id)) },
                 onApriSaldi          = { id -> navController.navigate(Screen.Saldi.withId(id)) },
                 onApriImpostazioni   = { id -> navController.navigate(Screen.ImpostazioniGruppo.withId(id)) },
+                onApriGrafici        = { id -> navController.navigate(Screen.Grafici.withId(id)) },
                 onApriAnalisi        = { gId, mese, anno ->
                     navController.navigate(Screen.AnalisiMese.withParams(gId, mese, anno))
                 },
@@ -217,6 +219,14 @@ fun AppNavigation(
                     navController.navigate(Screen.ModificaRicorrenza.withIds(gruppoId, ricorrenzaId))
                 },
             )
+        }
+
+        // ── Grafici ────────────────────────────────────────────────────────────
+        composable(
+            route     = Screen.Grafici.route,
+            arguments = listOf(navArgument("gruppoId") { type = NavType.StringType })
+        ) {
+            GraficiScreen(onNavigateBack = { navController.popBackStack() })
         }
 
         // ── Aggiungi ricorrenza ────────────────────────────────────────────────

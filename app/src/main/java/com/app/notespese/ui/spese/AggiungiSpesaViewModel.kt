@@ -12,9 +12,11 @@ import com.app.notespese.data.model.Spesa
 import com.app.notespese.data.model.TipoCategoria
 import com.app.notespese.data.model.TipoSpesa
 import com.app.notespese.data.repository.AuthRepository
+import com.app.notespese.data.repository.BudgetRepository
 import com.app.notespese.data.repository.CategoriaRepository
 import com.app.notespese.data.repository.GruppoRepository
 import com.app.notespese.data.repository.SpesaRepository
+import com.app.notespese.notification.NotificationHelper
 import com.google.firebase.Timestamp
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
@@ -33,6 +35,8 @@ class AggiungiSpesaViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val spesaRepository: SpesaRepository,
     private val categoriaRepository: CategoriaRepository,
+    private val budgetRepository: BudgetRepository,
+    private val notificationHelper: NotificationHelper,
     gruppoRepository: GruppoRepository,
     authRepository: AuthRepository,
 ) : ViewModel() {
@@ -117,6 +121,9 @@ class AggiungiSpesaViewModel @Inject constructor(
             anno        = dataSelezionata.year,
             note        = note.trim(),
         )
+        val catId = categoriaId
+        val mese  = dataSelezionata.monthValue
+        val anno  = dataSelezionata.year
         viewModelScope.launch {
             esito = Esito.Caricamento
             val result: Result<*> = if (isModifica) {
@@ -128,6 +135,24 @@ class AggiungiSpesaViewModel @Inject constructor(
                 onSuccess = { Esito.Salvato },
                 onFailure = { Esito.Errore(it.message ?: "Errore nel salvataggio") },
             )
+            if (result.isSuccess && !isModifica && catId.isNotEmpty()) {
+                checkBudget(catId, importoDouble, mese, anno)
+            }
+        }
+    }
+
+    private suspend fun checkBudget(catId: String, nuovoImporto: Double, mese: Int, anno: Int) {
+        val budget = budgetRepository.osservaBudget(gruppoId).first()
+            .find { it.id == catId }?.importoMensile ?: 0.0
+        if (budget <= 0.0) return
+
+        val totaleCorrente = spesaRepository.osservaSpesePerMese(gruppoId, mese, anno).first()
+            .filter { it.categoriaId == catId }.sumOf { it.importo }
+        val totalePrecedente = (totaleCorrente - nuovoImporto).coerceAtLeast(0.0)
+
+        if (totalePrecedente <= budget && totaleCorrente > budget) {
+            val nome = categorie.value.find { it.id == catId }?.nome ?: catId
+            notificationHelper.mostraBudgetSuperato(nome, totaleCorrente, budget)
         }
     }
 

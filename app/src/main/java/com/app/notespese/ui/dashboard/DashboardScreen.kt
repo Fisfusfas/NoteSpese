@@ -21,10 +21,12 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Balance
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.TrendingDown
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -70,6 +72,7 @@ fun DashboardScreen(
     onApriEntrate: (String) -> Unit,
     onApriSaldi: (String) -> Unit,
     onApriImpostazioni: (String) -> Unit,
+    onApriGrafici: (String) -> Unit,
     onApriAnalisi: (gruppoId: String, mese: Int, anno: Int) -> Unit,
     onApriAnalisiEntrate: (gruppoId: String, mese: Int, anno: Int) -> Unit,
     viewModel: DashboardViewModel = hiltViewModel(),
@@ -95,6 +98,7 @@ fun DashboardScreen(
                 onApriEntrate        = { onApriEntrate(gruppoId) },
                 onApriSaldi          = { onApriSaldi(gruppoId) },
                 onApriImpostazioni   = { onApriImpostazioni(gruppoId) },
+                onApriGrafici        = { onApriGrafici(gruppoId) },
                 onApriAnalisi        = { onApriAnalisi(gruppoId, state.mese, state.anno) },
                 onApriAnalisiEntrate = { onApriAnalisiEntrate(gruppoId, state.mese, state.anno) },
                 onMesePrecedente     = viewModel::mesePrecedente,
@@ -114,6 +118,7 @@ private fun DashboardContent(
     onApriEntrate: () -> Unit,
     onApriSaldi: () -> Unit,
     onApriImpostazioni: () -> Unit,
+    onApriGrafici: () -> Unit,
     onApriAnalisi: () -> Unit,
     onMesePrecedente: () -> Unit,
     onMeseSuccessivo: () -> Unit,
@@ -184,50 +189,81 @@ private fun DashboardContent(
 
             // ── Riepilogo ─────────────────────────────────────────────────────
             item {
-                Row(
-                    modifier              = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                val saldo = totaleEntrate - totaleSpese
+                val coloreVerde = Color(0xFF2E7D32)
+                Column(
+                    modifier            = Modifier.padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    CardRiepilogo(
-                        modifier    = Modifier.weight(1f),
-                        label       = "Spese del mese",
-                        valore      = formatEuro(totaleSpese),
-                        icona       = Icons.Default.ShoppingCart,
-                        coloreIcona = MaterialTheme.colorScheme.primary,
-                        onClick     = onApriAnalisi,
-                    )
-                    CardRiepilogo(
-                        modifier    = Modifier.weight(1f),
-                        label       = "Entrate del mese",
-                        valore      = formatEuro(totaleEntrate),
-                        icona       = Icons.Default.TrendingUp,
-                        coloreIcona = Color(0xFF2E7D32),
-                        onClick     = onApriAnalisiEntrate,
-                    )
-                }
-                Spacer(Modifier.height(12.dp))
-                Row(
-                    modifier              = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    CardRiepilogo(
-                        modifier    = Modifier.weight(1f),
-                        label       = "Operazioni",
-                        valore      = "${state.speseDelMese.size}",
-                        icona       = Icons.Default.Receipt,
-                        coloreIcona = MaterialTheme.colorScheme.tertiary,
-                    )
-                    CardRiepilogo(
-                        modifier    = Modifier.weight(1f),
-                        label       = "Membri",
-                        valore      = "${state.membri.size}",
-                        icona       = Icons.Default.Group,
-                        coloreIcona = MaterialTheme.colorScheme.secondary,
-                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        CardRiepilogo(
+                            modifier    = Modifier.weight(1f),
+                            label       = "Spese del mese",
+                            valore      = formatEuro(totaleSpese),
+                            icona       = Icons.Default.ShoppingCart,
+                            coloreIcona = MaterialTheme.colorScheme.error,
+                            onClick     = onApriAnalisi,
+                        )
+                        CardRiepilogo(
+                            modifier    = Modifier.weight(1f),
+                            label       = "Entrate del mese",
+                            valore      = formatEuro(totaleEntrate),
+                            icona       = Icons.Default.TrendingUp,
+                            coloreIcona = coloreVerde,
+                            onClick     = onApriAnalisiEntrate,
+                        )
+                    }
+                    // Saldo netto
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors   = CardDefaults.cardColors(
+                            containerColor = if (saldo >= 0)
+                                coloreVerde.copy(alpha = 0.1f)
+                            else
+                                MaterialTheme.colorScheme.errorContainer,
+                        ),
+                    ) {
+                        Row(
+                            modifier              = Modifier.fillMaxWidth().padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment     = Alignment.CenterVertically,
+                        ) {
+                            Row(
+                                verticalAlignment     = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                Icon(
+                                    imageVector        = if (saldo >= 0) Icons.Default.TrendingUp else Icons.Default.TrendingDown,
+                                    contentDescription = null,
+                                    tint               = if (saldo >= 0) coloreVerde else MaterialTheme.colorScheme.error,
+                                    modifier           = Modifier.size(20.dp),
+                                )
+                                Text("Saldo del mese", style = MaterialTheme.typography.bodyMedium)
+                            }
+                            Text(
+                                text       = formatEuro(saldo),
+                                style      = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color      = if (saldo >= 0) coloreVerde else MaterialTheme.colorScheme.error,
+                            )
+                        }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        CardRiepilogo(
+                            modifier    = Modifier.weight(1f),
+                            label       = "Operazioni",
+                            valore      = "${state.speseDelMese.size}",
+                            icona       = Icons.Default.Receipt,
+                            coloreIcona = MaterialTheme.colorScheme.tertiary,
+                        )
+                        CardRiepilogo(
+                            modifier    = Modifier.weight(1f),
+                            label       = "Membri",
+                            valore      = "${state.membri.size}",
+                            icona       = Icons.Default.Group,
+                            coloreIcona = MaterialTheme.colorScheme.secondary,
+                        )
+                    }
                 }
                 Spacer(Modifier.height(16.dp))
             }
@@ -242,33 +278,42 @@ private fun DashboardContent(
                 )
             }
             item {
-                Row(
-                    modifier              = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                Column(
+                    modifier            = Modifier.padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    CardNavigazione(
-                        modifier  = Modifier.weight(1f),
-                        etichetta = "Spese",
-                        icona     = Icons.Default.ShoppingCart,
-                        colore    = gruppoColore,
-                        onClick   = onApriSpese,
-                    )
-                    CardNavigazione(
-                        modifier  = Modifier.weight(1f),
-                        etichetta = "Entrate",
-                        icona     = Icons.Default.TrendingUp,
-                        colore    = Color(0xFF2E7D32),
-                        onClick   = onApriEntrate,
-                    )
-                    CardNavigazione(
-                        modifier  = Modifier.weight(1f),
-                        etichetta = "Saldi",
-                        icona     = Icons.Default.Balance,
-                        colore    = Color(0xFF6A1B9A),
-                        onClick   = onApriSaldi,
-                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        CardNavigazione(
+                            modifier  = Modifier.weight(1f),
+                            etichetta = "Spese",
+                            icona     = Icons.Default.ShoppingCart,
+                            colore    = gruppoColore,
+                            onClick   = onApriSpese,
+                        )
+                        CardNavigazione(
+                            modifier  = Modifier.weight(1f),
+                            etichetta = "Entrate",
+                            icona     = Icons.Default.TrendingUp,
+                            colore    = Color(0xFF2E7D32),
+                            onClick   = onApriEntrate,
+                        )
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        CardNavigazione(
+                            modifier  = Modifier.weight(1f),
+                            etichetta = "Saldi",
+                            icona     = Icons.Default.Balance,
+                            colore    = Color(0xFF6A1B9A),
+                            onClick   = onApriSaldi,
+                        )
+                        CardNavigazione(
+                            modifier  = Modifier.weight(1f),
+                            etichetta = "Grafici",
+                            icona     = Icons.Default.BarChart,
+                            colore    = Color(0xFF00838F),
+                            onClick   = onApriGrafici,
+                        )
+                    }
                 }
                 Spacer(Modifier.height(16.dp))
             }
