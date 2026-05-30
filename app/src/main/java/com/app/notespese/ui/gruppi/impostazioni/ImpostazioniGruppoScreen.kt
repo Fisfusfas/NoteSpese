@@ -51,7 +51,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import android.content.Intent
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -73,7 +75,9 @@ fun ImpostazioniGruppoScreen(
 
     // ── Dialog invito ──────────────────────────────────────────────────────────
     viewModel.invitoCodice?.let { codice ->
-        val clipboard = LocalClipboardManager.current
+        val clipboard  = LocalClipboardManager.current
+        val context    = LocalContext.current
+        val nomeGruppo = (uiState as? ImpostazioniGruppoViewModel.UiState.Successo)?.nomeGruppo ?: ""
         AlertDialog(
             onDismissRequest = viewModel::chiudiDialogCodice,
             title   = { Text("Codice invito generato") },
@@ -107,7 +111,15 @@ fun ImpostazioniGruppoScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = viewModel::chiudiDialogCodice) { Text("Chiudi") }
+                TextButton(onClick = {
+                    val testo = "Unisciti al gruppo \"$nomeGruppo\" su NoteSpese!\nCodice invito: $codice\nValido 48 ore."
+                    val intent = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_TEXT, testo)
+                    }
+                    context.startActivity(Intent.createChooser(intent, "Condividi codice invito"))
+                    viewModel.chiudiDialogCodice()
+                }) { Text("Condividi") }
             },
         )
     }

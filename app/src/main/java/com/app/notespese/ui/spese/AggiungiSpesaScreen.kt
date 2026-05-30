@@ -228,16 +228,6 @@ fun AggiungiSpesaScreen(
                 modifier      = Modifier.fillMaxWidth(),
             )
 
-            // ── Note ───────────────────────────────────────────────────────────
-            OutlinedTextField(
-                value         = viewModel.note,
-                onValueChange = { viewModel.note = it },
-                label         = { Text("Note (opzionale)") },
-                minLines      = 2,
-                maxLines      = 4,
-                modifier      = Modifier.fillMaxWidth(),
-            )
-
             // ── Bottone salva ──────────────────────────────────────────────────
             Button(
                 onClick  = { viewModel.salva() },

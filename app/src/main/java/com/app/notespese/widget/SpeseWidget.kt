@@ -225,7 +225,27 @@ private fun WidgetContent(context: Context, data: WidgetData) {
             }
         }
 
-        Spacer(GlanceModifier.height(8.dp))
+        Spacer(GlanceModifier.height(6.dp))
+
+        // ── Saldo ────────────────────────────────────────────────────────────
+        val saldo      = data.totaleEntrate - data.totaleSpese
+        val saldoColor = if (saldo >= 0) verde else rosso
+        Row(
+            modifier          = GlanceModifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text     = "Saldo",
+                style    = TextStyle(fontSize = 10.sp, color = ColorProvider(hint)),
+                modifier = GlanceModifier.defaultWeight(),
+            )
+            Text(
+                text  = fmt.format(saldo),
+                style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Bold, color = ColorProvider(saldoColor)),
+            )
+        }
+
+        Spacer(GlanceModifier.height(6.dp))
         Box(modifier = GlanceModifier.fillMaxWidth().height(1.dp).background(divider)) {}
         Spacer(GlanceModifier.height(6.dp))
 
