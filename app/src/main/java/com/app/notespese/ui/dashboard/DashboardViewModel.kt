@@ -114,4 +114,9 @@ class DashboardViewModel @Inject constructor(
             ym.monthValue to ym.year
         }
     }
+
+    fun tornaAdOggi() {
+        val now = YearMonth.now()
+        _meseAnno.value = now.monthValue to now.year
+    }
 }

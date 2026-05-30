@@ -282,71 +282,68 @@ fun EntrataListContent(
             }
         }
         is EntrataViewModel.UiState.Successo -> {
-            Box(modifier.fillMaxSize()) {
-                LazyColumn(
-                    modifier       = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 88.dp),
-                ) {
-                    item {
-                        Row(
-                            modifier              = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
-                            verticalAlignment     = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                        ) {
-                            IconButton(onClick = viewModel::mesePrecedente) {
-                                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Periodo precedente")
-                            }
-                            Text(state.periodoLabel, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                            IconButton(onClick = viewModel::meseSuccessivo) {
-                                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Periodo successivo")
-                            }
+            LazyColumn(
+                modifier       = modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = 88.dp),
+            ) {
+                item {
+                    Row(
+                        modifier              = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment     = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        IconButton(onClick = viewModel::mesePrecedente) {
+                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Periodo precedente")
                         }
-                    }
-                    if (state.entrate.isNotEmpty()) {
-                        item {
-                            val totale = state.entrate.sumOf { it.importo }
-                            Text(
-                                text     = "Totale: ${NumberFormat.getCurrencyInstance(Locale.ITALY).format(totale)}  ·  ${state.entrate.size} operazioni",
-                                style    = MaterialTheme.typography.bodySmall,
-                                color    = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                            )
-                            HorizontalDivider()
-                        }
-                    }
-                    if (state.entrate.isEmpty()) {
-                        item {
-                            Text(
-                                text      = "Nessuna entrata questo periodo.\nPremi + per aggiungerne una.",
-                                style     = MaterialTheme.typography.bodyMedium,
-                                color     = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center,
-                                modifier  = Modifier.fillMaxWidth().padding(32.dp),
-                            )
-                        }
-                    } else {
-                        items(state.entrate, key = { it.id }) { entrata ->
-                            val categoria = remember(entrata.categoriaId, state.categorie) {
-                                state.categorie.find { it.id == entrata.categoriaId }
-                            }
-                            val membro = remember(entrata.persona, state.membri) {
-                                state.membri.find { it.userId == entrata.persona }
-                            }
-                            EntrataSwipeItem(
-                                entrata    = entrata,
-                                categoria  = categoria,
-                                membro     = membro,
-                                onDelete   = { viewModel.eliminaEntrata(entrata.id) },
-                                onModifica = { onModificaEntrata(entrata.id) },
-                            )
+                        Text(
+                            text       = state.periodoLabel,
+                            style      = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier   = Modifier.clickable { viewModel.tornaAdOggi() },
+                        )
+                        IconButton(onClick = viewModel::meseSuccessivo) {
+                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Periodo successivo")
                         }
                     }
                 }
-                FloatingActionButton(
-                    onClick  = onAggiungiEntrata,
-                    modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Aggiungi entrata")
+                if (state.entrate.isNotEmpty()) {
+                    item {
+                        val totale = state.entrate.sumOf { it.importo }
+                        Text(
+                            text     = "Totale: ${NumberFormat.getCurrencyInstance(Locale.ITALY).format(totale)}  ·  ${state.entrate.size} operazioni",
+                            style    = MaterialTheme.typography.bodySmall,
+                            color    = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                        )
+                        HorizontalDivider()
+                    }
+                }
+                if (state.entrate.isEmpty()) {
+                    item {
+                        Text(
+                            text      = "Nessuna entrata questo periodo.\nPremi + per aggiungerne una.",
+                            style     = MaterialTheme.typography.bodyMedium,
+                            color     = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier  = Modifier.fillMaxWidth().padding(32.dp),
+                        )
+                    }
+                } else {
+                    items(state.entrate, key = { it.id }) { entrata ->
+                        val categoria = remember(entrata.categoriaId, state.categorie) {
+                            state.categorie.find { it.id == entrata.categoriaId }
+                        }
+                        val membro = remember(entrata.persona, state.membri) {
+                            state.membri.find { it.userId == entrata.persona }
+                        }
+                        EntrataSwipeItem(
+                            entrata    = entrata,
+                            categoria  = categoria,
+                            membro     = membro,
+                            onDelete   = { viewModel.eliminaEntrata(entrata.id) },
+                            onModifica = { onModificaEntrata(entrata.id) },
+                        )
+                    }
                 }
             }
         }

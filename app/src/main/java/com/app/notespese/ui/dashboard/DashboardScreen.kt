@@ -1,6 +1,7 @@
 package com.app.notespese.ui.dashboard
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,15 +16,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.AccountBalanceWallet
-import androidx.compose.material.icons.filled.Balance
 import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
@@ -39,6 +37,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -56,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.app.notespese.data.model.Spesa
+import com.app.notespese.data.model.TipoSpesa
 import com.app.notespese.ui.gruppi.iconaPerNome
 import com.app.notespese.ui.gruppi.parseColore
 import java.text.NumberFormat
@@ -105,6 +106,7 @@ fun DashboardScreen(
                 onApriAnalisiEntrate = { onApriAnalisiEntrate(gruppoId, state.mese, state.anno) },
                 onMesePrecedente     = viewModel::mesePrecedente,
                 onMeseSuccessivo     = viewModel::meseSuccessivo,
+                onTornaAdOggi        = viewModel::tornaAdOggi,
             )
         }
     }
@@ -140,6 +142,7 @@ fun DashboardTabContent(
                 onApriAnalisiEntrate = { onApriAnalisiEntrate(state.mese, state.anno) },
                 onMesePrecedente     = viewModel::mesePrecedente,
                 onMeseSuccessivo     = viewModel::meseSuccessivo,
+                onTornaAdOggi        = viewModel::tornaAdOggi,
             )
         }
     }
@@ -155,6 +158,7 @@ private fun DashboardPageContent(
     onApriAnalisiEntrate: () -> Unit,
     onMesePrecedente: () -> Unit,
     onMeseSuccessivo: () -> Unit,
+    onTornaAdOggi: () -> Unit,
 ) {
     val totaleSpese    = state.speseDelMese.sumOf { it.importo }
     val totaleEntrate  = state.entrateDelMese.sumOf { it.importo }
@@ -173,6 +177,7 @@ private fun DashboardPageContent(
                 etichetta        = state.periodoLabel,
                 onMesePrecedente = onMesePrecedente,
                 onMeseSuccessivo = onMeseSuccessivo,
+                onTornaAdOggi    = onTornaAdOggi,
             )
         }
 
@@ -215,23 +220,6 @@ private fun DashboardPageContent(
                     coloreVerde = coloreVerde,
                     icona = Icons.Default.AccountBalanceWallet,
                 )
-
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    CardRiepilogo(
-                        modifier    = Modifier.weight(1f),
-                        label       = "Operazioni",
-                        valore      = "${state.speseDelMese.size}",
-                        icona       = Icons.Default.Receipt,
-                        coloreIcona = MaterialTheme.colorScheme.tertiary,
-                    )
-                    CardRiepilogo(
-                        modifier    = Modifier.weight(1f),
-                        label       = "Membri",
-                        valore      = "${state.membri.size}",
-                        icona       = Icons.Default.Group,
-                        coloreIcona = MaterialTheme.colorScheme.secondary,
-                    )
-                }
             }
             Spacer(Modifier.height(16.dp))
         }
@@ -279,6 +267,7 @@ private fun DashboardFullContent(
     onApriAnalisiEntrate: () -> Unit,
     onMesePrecedente: () -> Unit,
     onMeseSuccessivo: () -> Unit,
+    onTornaAdOggi: () -> Unit,
 ) {
     val gruppoColore = parseColore(state.gruppo.colore)
     val gruppoIcona  = iconaPerNome(state.gruppo.icona)
@@ -323,6 +312,7 @@ private fun DashboardFullContent(
             onApriAnalisiEntrate = onApriAnalisiEntrate,
             onMesePrecedente     = onMesePrecedente,
             onMeseSuccessivo     = onMeseSuccessivo,
+            onTornaAdOggi        = onTornaAdOggi,
         )
     }
 }
@@ -334,6 +324,7 @@ private fun SelectoreMese(
     etichetta: String,
     onMesePrecedente: () -> Unit,
     onMeseSuccessivo: () -> Unit,
+    onTornaAdOggi: () -> Unit,
 ) {
     Row(
         modifier              = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
@@ -343,7 +334,12 @@ private fun SelectoreMese(
         IconButton(onClick = onMesePrecedente) {
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Periodo precedente")
         }
-        Text(etichetta, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Text(
+            text       = etichetta,
+            style      = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            modifier   = Modifier.clickable(onClick = onTornaAdOggi),
+        )
         IconButton(onClick = onMeseSuccessivo) {
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Periodo successivo")
         }
@@ -438,7 +434,36 @@ private fun RowSpesa(spesa: Spesa, onClick: () -> Unit) {
     }
     ListItem(
         headlineContent   = { Text(spesa.descrizione.ifBlank { "Spesa" }, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-        supportingContent = { if (dataFormattata.isNotEmpty()) Text(dataFormattata) },
+        supportingContent = {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment     = Alignment.CenterVertically,
+            ) {
+                if (dataFormattata.isNotEmpty()) {
+                    Text(dataFormattata, style = MaterialTheme.typography.bodySmall)
+                }
+                if (!spesa.condivisa) {
+                    SuggestionChip(
+                        onClick  = {},
+                        label    = { Text("Personale", style = MaterialTheme.typography.labelSmall) },
+                        colors   = SuggestionChipDefaults.suggestionChipColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        ),
+                        modifier = Modifier.height(20.dp),
+                    )
+                }
+                if (spesa.tipo == TipoSpesa.FISSA.name) {
+                    SuggestionChip(
+                        onClick  = {},
+                        label    = { Text("Fissa", style = MaterialTheme.typography.labelSmall) },
+                        colors   = SuggestionChipDefaults.suggestionChipColors(
+                            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                        ),
+                        modifier = Modifier.height(20.dp),
+                    )
+                }
+            }
+        },
         trailingContent   = {
             Text(
                 text       = formatEuro(spesa.importo),
@@ -448,7 +473,7 @@ private fun RowSpesa(spesa: Spesa, onClick: () -> Unit) {
             )
         },
         leadingContent    = { Icon(Icons.Default.Receipt, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
-        modifier          = Modifier,
+        modifier          = Modifier.clickable(onClick = onClick),
     )
     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
 }

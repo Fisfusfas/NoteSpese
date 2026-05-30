@@ -145,7 +145,10 @@ private fun TabCondivise(state: AnalisiMeseViewModel.UiState.Successo) {
         return
     }
 
-    var expandedCatId by rememberSaveable { mutableStateOf<String?>(null) }
+    var expandedCatId     by rememberSaveable { mutableStateOf<String?>(null) }
+    var expandedPaganteId by rememberSaveable { mutableStateOf<String?>(null) }
+    var expandedFisse     by rememberSaveable { mutableStateOf(false) }
+    var expandedVariabili by rememberSaveable { mutableStateOf(false) }
 
     val perCategoria = remember(spese) {
         spese.groupBy { it.categoriaId }.map { (catId, gruppo) ->
@@ -160,10 +163,10 @@ private fun TabCondivise(state: AnalisiMeseViewModel.UiState.Successo) {
             .sortedByDescending { it.second.sumOf { s -> s.importo } }
     }
 
-    val totaleFisse    = remember(spese) { spese.filter { it.tipo == TipoSpesa.FISSA.name }.sumOf { it.importo } }
-    val totaleVariabili = remember(spese) { spese.filter { it.tipo != TipoSpesa.FISSA.name }.sumOf { it.importo } }
-    val nFisse         = remember(spese) { spese.count { it.tipo == TipoSpesa.FISSA.name } }
-    val nVariabili     = remember(spese) { spese.count { it.tipo != TipoSpesa.FISSA.name } }
+    val speseFisse     = remember(spese) { spese.filter { it.tipo == TipoSpesa.FISSA.name }.sortedByDescending { it.data?.seconds ?: 0 } }
+    val speseVariabili = remember(spese) { spese.filter { it.tipo != TipoSpesa.FISSA.name }.sortedByDescending { it.data?.seconds ?: 0 } }
+    val totaleFisse    = remember(speseFisse) { speseFisse.sumOf { it.importo } }
+    val totaleVariabili = remember(speseVariabili) { speseVariabili.sumOf { it.importo } }
 
     LazyColumn(
         modifier            = Modifier.fillMaxSize(),
@@ -210,14 +213,31 @@ private fun TabCondivise(state: AnalisiMeseViewModel.UiState.Successo) {
                 Text("Chi ha pagato", style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            items(perPagante.mapIndexed { idx, (userId, gruppo) ->
-                val membro = state.membri.find { it.userId == userId }
-                val nome   = membro?.nominativoLocale?.ifBlank { null } ?: userId.take(8)
-                val tot    = gruppo.sumOf { it.importo }
-                val perc   = if (totale > 0) (tot / totale).toFloat() else 0f
-                AnalisiMeseViewModel.PaganteAnalisi(userId, nome, tot, gruppo.size, perc, idx)
-            }) { pagante ->
-                CardPagante(pagante = pagante)
+            perPagante.forEachIndexed { idx, (userId, gruppo) ->
+                item(key = "pagante_$userId") {
+                    val membro = remember(userId, state.membri) { state.membri.find { it.userId == userId } }
+                    val nome   = membro?.nominativoLocale?.ifBlank { null } ?: userId.take(8)
+                    val tot    = gruppo.sumOf { it.importo }
+                    val perc   = if (totale > 0) (tot / totale).toFloat() else 0f
+                    val pagante = AnalisiMeseViewModel.PaganteAnalisi(userId, nome, tot, gruppo.size, perc, idx)
+                    val isExpanded = expandedPaganteId == userId
+
+                    CardPagante(
+                        pagante    = pagante,
+                        isExpanded = isExpanded,
+                        onClick    = { expandedPaganteId = if (isExpanded) null else userId },
+                    )
+                    AnimatedVisibility(visible = isExpanded) {
+                        Column(
+                            modifier            = Modifier.padding(start = 8.dp, top = 4.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            gruppo.sortedByDescending { it.data?.seconds ?: 0 }.forEach { spesa ->
+                                RigaSpesaDettaglio(spesa = spesa, membri = state.membri)
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -227,15 +247,51 @@ private fun TabCondivise(state: AnalisiMeseViewModel.UiState.Successo) {
             Text("Tipologia", style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        item {
-            CardTipologia(
-                totaleFisse     = totaleFisse,
-                totaleVariabili = totaleVariabili,
-                nFisse          = nFisse,
-                nVariabili      = nVariabili,
-                totaleTot       = totale,
-                fmt             = fmt,
+        item(key = "tipologia_fisse") {
+            val percFisse = if (totale > 0) (totaleFisse / totale).toFloat() else 0f
+            CardTipologiaRow(
+                label      = "Fisse",
+                totale     = totaleFisse,
+                n          = speseFisse.size,
+                perc       = percFisse,
+                colore     = MaterialTheme.colorScheme.tertiary,
+                fmt        = fmt,
+                isExpanded = expandedFisse,
+                onClick    = { expandedFisse = !expandedFisse },
             )
+            AnimatedVisibility(visible = expandedFisse) {
+                Column(
+                    modifier            = Modifier.padding(start = 8.dp, top = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    speseFisse.forEach { spesa ->
+                        RigaSpesaDettaglio(spesa = spesa, membri = state.membri)
+                    }
+                }
+            }
+        }
+        item(key = "tipologia_variabili") {
+            val percVariabili = if (totale > 0) (totaleVariabili / totale).toFloat() else 0f
+            CardTipologiaRow(
+                label      = "Variabili",
+                totale     = totaleVariabili,
+                n          = speseVariabili.size,
+                perc       = percVariabili,
+                colore     = MaterialTheme.colorScheme.secondary,
+                fmt        = fmt,
+                isExpanded = expandedVariabili,
+                onClick    = { expandedVariabili = !expandedVariabili },
+            )
+            AnimatedVisibility(visible = expandedVariabili) {
+                Column(
+                    modifier            = Modifier.padding(start = 8.dp, top = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    speseVariabili.forEach { spesa ->
+                        RigaSpesaDettaglio(spesa = spesa, membri = state.membri)
+                    }
+                }
+            }
         }
     }
 }
@@ -352,60 +408,50 @@ private fun TabPersonali(state: AnalisiMeseViewModel.UiState.Successo) {
     }
 }
 
-// ── Card tipologia fissa/variabile ─────────────────────────────────────────────
+// ── Card tipologia (expandable row) ──────────────────────────────────────────
 
 @Composable
-private fun CardTipologia(
-    totaleFisse: Double,
-    totaleVariabili: Double,
-    nFisse: Int,
-    nVariabili: Int,
-    totaleTot: Double,
+private fun CardTipologiaRow(
+    label: String,
+    totale: Double,
+    n: Int,
+    perc: Float,
+    colore: Color,
     fmt: NumberFormat,
+    isExpanded: Boolean,
+    onClick: () -> Unit,
 ) {
-    val percFisse     = if (totaleTot > 0) (totaleFisse / totaleTot).toFloat() else 0f
-    val percVariabili = if (totaleTot > 0) (totaleVariabili / totaleTot).toFloat() else 0f
-    val coloreFissa    = MaterialTheme.colorScheme.tertiary
-    val coloreVariabile = MaterialTheme.colorScheme.secondary
-
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
     ) {
-        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
             Row(
                 modifier          = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Box(Modifier.size(10.dp).clip(CircleShape).background(coloreFissa))
-                Text("Fisse", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                Text("$nFisse op.", style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(fmt.format(totaleFisse), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                Box(Modifier.size(10.dp).clip(CircleShape).background(colore))
+                Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                Text(
+                    text  = "$n op.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(fmt.format(totale), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.width(4.dp))
+                Icon(
+                    imageVector        = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                    contentDescription = if (isExpanded) "Comprimi" else "Espandi",
+                    modifier           = Modifier.size(20.dp),
+                    tint               = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
+            Spacer(Modifier.height(8.dp))
             LinearProgressIndicator(
-                progress   = { percFisse },
+                progress   = { perc },
                 modifier   = Modifier.fillMaxWidth(),
-                color      = coloreFissa,
-                trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-            )
-            Row(
-                modifier          = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Box(Modifier.size(10.dp).clip(CircleShape).background(coloreVariabile))
-                Text("Variabili", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                Text("$nVariabili op.", style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(fmt.format(totaleVariabili), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-            }
-            LinearProgressIndicator(
-                progress   = { percVariabili },
-                modifier   = Modifier.fillMaxWidth(),
-                color      = coloreVariabile,
+                color      = colore,
                 trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
             )
         }
@@ -598,10 +644,15 @@ private fun RigaSpesaDettaglio(spesa: Spesa, membri: List<Membro>) {
 // ── Card pagante ───────────────────────────────────────────────────────────────
 
 @Composable
-private fun CardPagante(pagante: AnalisiMeseViewModel.PaganteAnalisi) {
+private fun CardPagante(
+    pagante: AnalisiMeseViewModel.PaganteAnalisi,
+    isExpanded: Boolean = false,
+    onClick: () -> Unit = {},
+) {
     val colore = colorePagante(pagante.coloreIdx)
+    val fmt    = NumberFormat.getCurrencyInstance(Locale.ITALY)
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
     ) {
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
@@ -611,12 +662,24 @@ private fun CardPagante(pagante: AnalisiMeseViewModel.PaganteAnalisi) {
             ) {
                 Box(Modifier.size(12.dp).clip(CircleShape).background(colore))
                 Spacer(Modifier.width(10.dp))
-                Text(pagante.nome, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
                 Text(
-                    text       = NumberFormat.getCurrencyInstance(Locale.ITALY).format(pagante.totale),
+                    text       = pagante.nome,
+                    style      = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                    modifier   = Modifier.weight(1f),
+                )
+                Text(
+                    text       = fmt.format(pagante.totale),
                     style      = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold,
                     color      = colore,
+                )
+                Spacer(Modifier.width(4.dp))
+                Icon(
+                    imageVector        = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                    contentDescription = if (isExpanded) "Comprimi" else "Espandi",
+                    modifier           = Modifier.size(20.dp),
+                    tint               = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Spacer(Modifier.height(8.dp))
@@ -637,7 +700,7 @@ private fun CardPagante(pagante: AnalisiMeseViewModel.PaganteAnalisi) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    text  = "${NumberFormat.getCurrencyInstance(Locale.ITALY).format(pagante.totale)}  ·  ${(pagante.percentualeBar * 100).toInt()}%",
+                    text  = "${(pagante.percentualeBar * 100).toInt()}%",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

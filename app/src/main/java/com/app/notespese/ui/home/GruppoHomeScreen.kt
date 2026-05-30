@@ -31,6 +31,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -46,10 +47,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.app.notespese.ui.dashboard.DashboardTabContent
 import com.app.notespese.ui.dashboard.DashboardViewModel
 import com.app.notespese.ui.entrate.EntrataListContent
+import com.app.notespese.ui.entrate.EntrataViewModel
 import com.app.notespese.ui.gruppi.iconaPerNome
 import com.app.notespese.ui.gruppi.parseColore
 import com.app.notespese.ui.saldi.SaldoTabContent
 import com.app.notespese.ui.spese.SpesaListContent
+import com.app.notespese.ui.spese.SpesaViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -65,6 +68,8 @@ fun GruppoHomeScreen(
     onApriAnalisi: (String, Int, Int) -> Unit,
     onApriAnalisiEntrate: (String, Int, Int) -> Unit,
     dashboardViewModel: DashboardViewModel = hiltViewModel(),
+    spesaViewModel: SpesaViewModel = hiltViewModel(),
+    entrataViewModel: EntrataViewModel = hiltViewModel(),
 ) {
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
 
@@ -74,6 +79,16 @@ fun GruppoHomeScreen(
         ?.gruppo?.colore?.let { parseColore(it) } ?: MaterialTheme.colorScheme.primary
     val gruppoIcona = (dashState as? DashboardViewModel.UiState.Successo)
         ?.gruppo?.icona?.let { iconaPerNome(it) }
+
+    // Keep Spese and Entrate tabs in sync with the Dashboard period
+    val dashMese = (dashState as? DashboardViewModel.UiState.Successo)?.mese
+    val dashAnno = (dashState as? DashboardViewModel.UiState.Successo)?.anno
+    LaunchedEffect(dashMese, dashAnno) {
+        if (dashMese != null && dashAnno != null) {
+            spesaViewModel.setMese(dashMese, dashAnno)
+            entrataViewModel.setMese(dashMese, dashAnno)
+        }
+    }
 
     val tabs = listOf(
         Triple("Home",     Icons.Default.Home,         0),
@@ -120,10 +135,8 @@ fun GruppoHomeScreen(
                     }
                 },
                 actions = {
-                    if (selectedTab == 0) {
-                        IconButton(onClick = { onApriStatistiche(gruppoId) }) {
-                            Icon(Icons.Default.BarChart, contentDescription = "Statistiche")
-                        }
+                    IconButton(onClick = { onApriStatistiche(gruppoId) }) {
+                        Icon(Icons.Default.BarChart, contentDescription = "Statistiche")
                     }
                     IconButton(onClick = { onApriImpostazioni(gruppoId) }) {
                         Icon(Icons.Default.Settings, contentDescription = "Impostazioni gruppo")
@@ -144,9 +157,12 @@ fun GruppoHomeScreen(
             }
         },
         floatingActionButton = {
-            if (selectedTab <= 1) {
-                FloatingActionButton(onClick = { onApriAggiungiSpesa(gruppoId) }) {
+            when (selectedTab) {
+                0, 1 -> FloatingActionButton(onClick = { onApriAggiungiSpesa(gruppoId) }) {
                     Icon(Icons.Default.Add, contentDescription = "Aggiungi spesa")
+                }
+                2 -> FloatingActionButton(onClick = { onApriAggiungiEntrata(gruppoId) }) {
+                    Icon(Icons.Default.Add, contentDescription = "Aggiungi entrata")
                 }
             }
         },
@@ -166,10 +182,12 @@ fun GruppoHomeScreen(
                     )
                     1 -> SpesaListContent(
                         onModificaSpesa = { spesaId -> onApriModificaSpesa(gruppoId, spesaId) },
+                        viewModel       = spesaViewModel,
                     )
                     2 -> EntrataListContent(
                         onAggiungiEntrata = { onApriAggiungiEntrata(gruppoId) },
                         onModificaEntrata = { entrataId -> onApriModificaEntrata(gruppoId, entrataId) },
+                        viewModel         = entrataViewModel,
                     )
                     3 -> SaldoTabContent()
                 }

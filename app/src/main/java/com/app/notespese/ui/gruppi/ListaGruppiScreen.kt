@@ -217,18 +217,41 @@ fun ListaGruppiScreen(
                 }
 
                 is ListaGruppiViewModel.UiState.Successo -> {
-                    if (state.gruppi.isEmpty()) {
-                        StatoVuoto(Modifier.align(Alignment.Center))
-                    } else {
-                        LazyColumn(
-                            modifier            = Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                            contentPadding      = androidx.compose.foundation.layout.PaddingValues(
-                                horizontal = 16.dp, vertical = 12.dp
-                            )
-                        ) {
-                            items(state.gruppi, key = { it.id }) { gruppo ->
-                                GruppoCard(gruppo = gruppo, onClick = { onApriGruppo(gruppo.id) })
+                    Column(Modifier.fillMaxSize()) {
+                        if (utente.email.isBlank()) {
+                            Card(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                                colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Text(
+                                        text  = "Modalità demo",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        color = MaterialTheme.colorScheme.onErrorContainer,
+                                    )
+                                    Text(
+                                        text  = "I dati non sono sincronizzati. Accedi con Google per salvarli.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onErrorContainer,
+                                    )
+                                }
+                            }
+                        }
+                        if (state.gruppi.isEmpty()) {
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                StatoVuoto()
+                            }
+                        } else {
+                            LazyColumn(
+                                modifier            = Modifier.fillMaxSize(),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                contentPadding      = androidx.compose.foundation.layout.PaddingValues(
+                                    horizontal = 16.dp, vertical = 12.dp
+                                )
+                            ) {
+                                items(state.gruppi, key = { it.id }) { gruppo ->
+                                    GruppoCard(gruppo = gruppo, onClick = { onApriGruppo(gruppo.id) })
+                                }
                             }
                         }
                     }

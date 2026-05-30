@@ -368,7 +368,12 @@ fun SpesaListContent(
                         IconButton(onClick = viewModel::mesePrecedente) {
                             Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Periodo precedente")
                         }
-                        Text(state.periodoLabel, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            text      = state.periodoLabel,
+                            style     = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier  = Modifier.clickable { viewModel.tornaAdOggi() },
+                        )
                         IconButton(onClick = viewModel::meseSuccessivo) {
                             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Periodo successivo")
                         }

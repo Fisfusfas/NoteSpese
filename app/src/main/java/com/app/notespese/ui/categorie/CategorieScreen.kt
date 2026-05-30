@@ -47,6 +47,8 @@ import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -81,6 +83,24 @@ fun CategorieScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val fmt = NumberFormat.getCurrencyInstance(Locale.ITALY)
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
+    var deleteId by remember { mutableStateOf<String?>(null) }
+
+    // ── Dialog conferma eliminazione ───────────────────────────────────────────
+    deleteId?.let { idDaEliminare ->
+        AlertDialog(
+            onDismissRequest = { deleteId = null },
+            title   = { Text("Elimina categoria") },
+            text    = { Text("Vuoi eliminare questa categoria? L'operazione non può essere annullata.") },
+            confirmButton = {
+                TextButton(onClick = { viewModel.elimina(idDaEliminare); deleteId = null }) {
+                    Text("Elimina", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { deleteId = null }) { Text("Annulla") }
+            },
+        )
+    }
 
     // ── Dialog add/edit ────────────────────────────────────────────────────────
     if (viewModel.showDialog) {
@@ -261,11 +281,11 @@ fun CategorieScreen(
                         ) {
                             items(righe, key = { it.categoria.id }) { riga ->
                                 CategoriaSwipeItem(
-                                    riga      = riga,
-                                    fmt       = fmt,
-                                    showBudget = selectedTab == 0,
-                                    onModifica = { viewModel.apriModifica(riga) },
-                                    onDelete  = { viewModel.elimina(riga.categoria.id) },
+                                    riga             = riga,
+                                    fmt              = fmt,
+                                    showBudget       = selectedTab == 0,
+                                    onModifica       = { viewModel.apriModifica(riga) },
+                                    onDeleteRequest  = { deleteId = riga.categoria.id },
                                 )
                             }
                         }
@@ -283,11 +303,11 @@ private fun CategoriaSwipeItem(
     fmt: java.text.NumberFormat,
     showBudget: Boolean,
     onModifica: () -> Unit,
-    onDelete: () -> Unit,
+    onDeleteRequest: () -> Unit,
 ) {
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
-            if (value == SwipeToDismissBoxValue.EndToStart) { onDelete(); true } else false
+            if (value == SwipeToDismissBoxValue.EndToStart) { onDeleteRequest(); false } else false
         },
         positionalThreshold = { it * 0.4f },
     )
