@@ -1,5 +1,6 @@
 package com.app.notespese.ui.spese
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -71,7 +72,12 @@ fun AggiungiSpesaScreen(
     val membri    by viewModel.membri.collectAsStateWithLifecycle()
 
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
+    var showNote by rememberSaveable { mutableStateOf(false) }
     var dropdownExpanded by remember { mutableStateOf(false) }
+
+    LaunchedEffect(viewModel.note) {
+        if (viewModel.note.isNotBlank()) showNote = true
+    }
 
     Scaffold(
         topBar = {
@@ -229,6 +235,24 @@ fun AggiungiSpesaScreen(
                 },
                 modifier      = Modifier.fillMaxWidth(),
             )
+
+            // ── Note (collapsibile) ────────────────────────────────────────────
+            TextButton(
+                onClick  = { showNote = !showNote },
+                modifier = Modifier.align(Alignment.Start),
+            ) {
+                Text(if (showNote) "Rimuovi nota" else "Aggiungi nota")
+            }
+            AnimatedVisibility(visible = showNote) {
+                OutlinedTextField(
+                    value         = viewModel.note,
+                    onValueChange = { viewModel.note = it },
+                    label         = { Text("Nota") },
+                    minLines      = 2,
+                    maxLines      = 4,
+                    modifier      = Modifier.fillMaxWidth(),
+                )
+            }
 
             // ── Bottone salva ──────────────────────────────────────────────────
             Button(

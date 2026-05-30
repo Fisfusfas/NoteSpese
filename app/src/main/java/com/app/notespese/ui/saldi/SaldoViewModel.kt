@@ -106,6 +106,15 @@ class SaldoViewModel @Inject constructor(
         }
     }
 
+    fun setMese(mese: Int, anno: Int) {
+        if (_meseAnno.value != mese to anno) _meseAnno.value = mese to anno
+    }
+
+    fun tornaAdOggi() {
+        val now = YearMonth.now()
+        _meseAnno.value = now.monthValue to now.year
+    }
+
     fun calcolaESalva() {
         val state  = uiState.value as? UiState.Successo ?: return
         val meseId = "%04d-%02d".format(state.anno, state.mese)

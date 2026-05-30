@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -29,11 +30,14 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -54,6 +58,23 @@ fun RicorrenzeScreen(
     viewModel: RicorrenzeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var deleteId by remember { mutableStateOf<String?>(null) }
+
+    deleteId?.let { idDaEliminare ->
+        AlertDialog(
+            onDismissRequest = { deleteId = null },
+            title   = { Text("Elimina ricorrenza") },
+            text    = { Text("Vuoi eliminare questa ricorrenza? L'operazione non può essere annullata.") },
+            confirmButton = {
+                TextButton(onClick = { viewModel.elimina(idDaEliminare); deleteId = null }) {
+                    Text("Elimina", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { deleteId = null }) { Text("Annulla") }
+            },
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -116,7 +137,7 @@ fun RicorrenzeScreen(
                                 catNome   = categoria?.nome,
                                 pagante   = pagante,
                                 onModifica = { onModifica(ric.id) },
-                                onDelete  = { viewModel.elimina(ric.id) },
+                                onDelete  = { deleteId = ric.id },
                                 onToggle  = { viewModel.toggleAttiva(ric) },
                             )
                             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
@@ -140,7 +161,7 @@ private fun RicorrenzaSwipeItem(
 ) {
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
-            if (value == SwipeToDismissBoxValue.EndToStart) { onDelete(); true } else false
+            if (value == SwipeToDismissBoxValue.EndToStart) { onDelete(); false } else false
         },
         positionalThreshold = { it * 0.4f },
     )

@@ -110,7 +110,7 @@ fun AggiungiRicorrenzaScreen(
             )
 
             // ── Chi paga ───────────────────────────────────────────────────────
-            if (membri.isNotEmpty()) {
+            if (membri.size > 1) {
                 ExposedDropdownMenuBox(
                     expanded         = dropdownExpanded,
                     onExpandedChange = { dropdownExpanded = it },
@@ -162,17 +162,19 @@ fun AggiungiRicorrenzaScreen(
             }
 
             // ── Condivisa ──────────────────────────────────────────────────────
-            Row(
-                modifier          = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Column {
-                    Text("Spesa condivisa", style = MaterialTheme.typography.bodyLarge)
-                    Text("Inclusa nel calcolo saldi", style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (membri.size > 1) {
+                Row(
+                    modifier          = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Column {
+                        Text("Spesa condivisa", style = MaterialTheme.typography.bodyLarge)
+                        Text("Inclusa nel calcolo saldi", style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Switch(checked = viewModel.condivisa, onCheckedChange = { viewModel.condivisa = it })
                 }
-                Switch(checked = viewModel.condivisa, onCheckedChange = { viewModel.condivisa = it })
             }
 
             // ── Giorno del mese ────────────────────────────────────────────────

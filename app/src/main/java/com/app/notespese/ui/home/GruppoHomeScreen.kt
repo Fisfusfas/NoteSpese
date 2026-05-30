@@ -51,6 +51,7 @@ import com.app.notespese.ui.entrate.EntrataViewModel
 import com.app.notespese.ui.gruppi.iconaPerNome
 import com.app.notespese.ui.gruppi.parseColore
 import com.app.notespese.ui.saldi.SaldoTabContent
+import com.app.notespese.ui.saldi.SaldoViewModel
 import com.app.notespese.ui.spese.SpesaListContent
 import com.app.notespese.ui.spese.SpesaViewModel
 
@@ -70,23 +71,57 @@ fun GruppoHomeScreen(
     dashboardViewModel: DashboardViewModel = hiltViewModel(),
     spesaViewModel: SpesaViewModel = hiltViewModel(),
     entrataViewModel: EntrataViewModel = hiltViewModel(),
+    saldoViewModel: SaldoViewModel = hiltViewModel(),
 ) {
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
 
-    val dashState by dashboardViewModel.uiState.collectAsStateWithLifecycle()
+    val dashState   by dashboardViewModel.uiState.collectAsStateWithLifecycle()
+    val spesaState  by spesaViewModel.uiState.collectAsStateWithLifecycle()
+    val entrataState by entrataViewModel.uiState.collectAsStateWithLifecycle()
+    val saldoState  by saldoViewModel.uiState.collectAsStateWithLifecycle()
+
     val gruppoNome = (dashState as? DashboardViewModel.UiState.Successo)?.gruppo?.nome ?: ""
     val gruppoColore = (dashState as? DashboardViewModel.UiState.Successo)
         ?.gruppo?.colore?.let { parseColore(it) } ?: MaterialTheme.colorScheme.primary
     val gruppoIcona = (dashState as? DashboardViewModel.UiState.Successo)
         ?.gruppo?.icona?.let { iconaPerNome(it) }
 
-    // Keep Spese and Entrate tabs in sync with the Dashboard period
+    // Bidirectional period sync — each VM's period propagates to all others.
+    // setMese() is idempotent so cycles terminate after one round-trip.
     val dashMese = (dashState as? DashboardViewModel.UiState.Successo)?.mese
     val dashAnno = (dashState as? DashboardViewModel.UiState.Successo)?.anno
     LaunchedEffect(dashMese, dashAnno) {
         if (dashMese != null && dashAnno != null) {
             spesaViewModel.setMese(dashMese, dashAnno)
             entrataViewModel.setMese(dashMese, dashAnno)
+            saldoViewModel.setMese(dashMese, dashAnno)
+        }
+    }
+    val spesaMese = (spesaState as? SpesaViewModel.UiState.Successo)?.mese
+    val spesaAnno = (spesaState as? SpesaViewModel.UiState.Successo)?.anno
+    LaunchedEffect(spesaMese, spesaAnno) {
+        if (spesaMese != null && spesaAnno != null) {
+            dashboardViewModel.setMese(spesaMese, spesaAnno)
+            entrataViewModel.setMese(spesaMese, spesaAnno)
+            saldoViewModel.setMese(spesaMese, spesaAnno)
+        }
+    }
+    val entrataMese = (entrataState as? EntrataViewModel.UiState.Successo)?.mese
+    val entrataAnno = (entrataState as? EntrataViewModel.UiState.Successo)?.anno
+    LaunchedEffect(entrataMese, entrataAnno) {
+        if (entrataMese != null && entrataAnno != null) {
+            dashboardViewModel.setMese(entrataMese, entrataAnno)
+            spesaViewModel.setMese(entrataMese, entrataAnno)
+            saldoViewModel.setMese(entrataMese, entrataAnno)
+        }
+    }
+    val saldoMese = (saldoState as? SaldoViewModel.UiState.Successo)?.mese
+    val saldoAnno = (saldoState as? SaldoViewModel.UiState.Successo)?.anno
+    LaunchedEffect(saldoMese, saldoAnno) {
+        if (saldoMese != null && saldoAnno != null) {
+            dashboardViewModel.setMese(saldoMese, saldoAnno)
+            spesaViewModel.setMese(saldoMese, saldoAnno)
+            entrataViewModel.setMese(saldoMese, saldoAnno)
         }
     }
 
@@ -189,7 +224,7 @@ fun GruppoHomeScreen(
                         onModificaEntrata = { entrataId -> onApriModificaEntrata(gruppoId, entrataId) },
                         viewModel         = entrataViewModel,
                     )
-                    3 -> SaldoTabContent()
+                    3 -> SaldoTabContent(viewModel = saldoViewModel)
                 }
             }
         }

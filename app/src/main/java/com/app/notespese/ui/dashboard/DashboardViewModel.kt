@@ -115,6 +115,10 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
+    fun setMese(mese: Int, anno: Int) {
+        if (_meseAnno.value != mese to anno) _meseAnno.value = mese to anno
+    }
+
     fun tornaAdOggi() {
         val now = YearMonth.now()
         _meseAnno.value = now.monthValue to now.year

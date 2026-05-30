@@ -1,7 +1,6 @@
 package com.app.notespese.ui.entrate
 
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.SavedStateHandle
@@ -22,8 +21,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.Instant
 import java.time.LocalDate
-import java.time.YearMonth
 import java.time.ZoneId
 import java.util.Date
 import javax.inject.Inject
@@ -42,13 +41,12 @@ class AggiungiEntrataViewModel @Inject constructor(
     val isModifica: Boolean = entrataId != null
 
     // ── Form state ─────────────────────────────────────────────────────────────
-    var importoText   by mutableStateOf("")
-    var persona       by mutableStateOf("")
-    var categoriaId   by mutableStateOf("")
-    var mese          by mutableIntStateOf(YearMonth.now().monthValue)
-    var anno          by mutableIntStateOf(YearMonth.now().year)
-    var note          by mutableStateOf("")
-    var erroreImporto by mutableStateOf(false)
+    var importoText     by mutableStateOf("")
+    var persona         by mutableStateOf("")
+    var categoriaId     by mutableStateOf("")
+    var dataSelezionata by mutableStateOf(LocalDate.now())
+    var note            by mutableStateOf("")
+    var erroreImporto   by mutableStateOf(false)
 
     sealed interface Esito {
         data object Inattivo    : Esito
@@ -80,23 +78,14 @@ class AggiungiEntrataViewModel @Inject constructor(
                         importoText = it.importo.toBigDecimal().stripTrailingZeros().toPlainString()
                         persona     = it.persona
                         categoriaId = it.categoriaId
-                        mese        = it.mese
-                        anno        = it.anno
+                        dataSelezionata = it.data?.toDate()?.let { d ->
+                            Instant.ofEpochMilli(d.time).atZone(ZoneId.systemDefault()).toLocalDate()
+                        } ?: LocalDate.of(it.anno, it.mese, 1)
                         note        = it.note
                     }
                 }
             }
         }
-    }
-
-    fun mesePrecedente() {
-        val ym = YearMonth.of(anno, mese).minusMonths(1)
-        mese = ym.monthValue; anno = ym.year
-    }
-
-    fun meseSuccessivo() {
-        val ym = YearMonth.of(anno, mese).plusMonths(1)
-        mese = ym.monthValue; anno = ym.year
     }
 
     fun salva() {
@@ -107,15 +96,15 @@ class AggiungiEntrataViewModel @Inject constructor(
         }
         erroreImporto = false
         val dataTs = com.google.firebase.Timestamp(
-            Date.from(LocalDate.of(anno, mese, 1).atStartOfDay(ZoneId.systemDefault()).toInstant())
+            Date.from(dataSelezionata.atStartOfDay(ZoneId.systemDefault()).toInstant())
         )
         val entrata = Entrata(
             id          = entrataId ?: "",
             importo     = importoDouble,
             persona     = persona,
             categoriaId = categoriaId,
-            mese        = mese,
-            anno        = anno,
+            mese        = dataSelezionata.monthValue,
+            anno        = dataSelezionata.year,
             note        = note.trim(),
             data        = dataTs,
         )

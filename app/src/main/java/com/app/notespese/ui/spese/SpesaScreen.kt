@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -20,16 +21,20 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.SuggestionChipDefaults
@@ -43,6 +48,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -344,6 +350,8 @@ fun SpesaListContent(
     viewModel: SpesaViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var query  by rememberSaveable { mutableStateOf("") }
+    var filtro by rememberSaveable { mutableStateOf("Tutte") }
 
     when (val state = uiState) {
         is SpesaViewModel.UiState.Caricamento -> {
@@ -355,10 +363,21 @@ fun SpesaListContent(
             }
         }
         is SpesaViewModel.UiState.Successo -> {
+            val speseFiltrate = state.spese.filter { spesa ->
+                (query.isBlank() || spesa.descrizione.contains(query, ignoreCase = true)) &&
+                when (filtro) {
+                    "Fisse"     -> spesa.tipo == TipoSpesa.FISSA.name
+                    "Variabili" -> spesa.tipo == TipoSpesa.VARIABILE.name
+                    "Personali" -> !spesa.condivisa
+                    else        -> true
+                }
+            }
+
             LazyColumn(
                 modifier       = modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 88.dp),
             ) {
+                // ── Selettore periodo ─────────────────────────────────────────
                 item {
                     Row(
                         modifier              = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
@@ -369,21 +388,53 @@ fun SpesaListContent(
                             Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Periodo precedente")
                         }
                         Text(
-                            text      = state.periodoLabel,
-                            style     = MaterialTheme.typography.titleMedium,
+                            text       = state.periodoLabel,
+                            style      = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
-                            modifier  = Modifier.clickable { viewModel.tornaAdOggi() },
+                            modifier   = Modifier.clickable { viewModel.tornaAdOggi() },
                         )
                         IconButton(onClick = viewModel::meseSuccessivo) {
                             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Periodo successivo")
                         }
                     }
                 }
-                if (state.spese.isNotEmpty()) {
+
+                // ── Barra di ricerca ──────────────────────────────────────────
+                item {
+                    OutlinedTextField(
+                        value         = query,
+                        onValueChange = { query = it },
+                        label         = { Text("Cerca…") },
+                        leadingIcon   = { Icon(Icons.Default.Search, contentDescription = null) },
+                        trailingIcon  = if (query.isNotEmpty()) {
+                            { IconButton(onClick = { query = "" }) { Icon(Icons.Default.Clear, contentDescription = "Cancella") } }
+                        } else null,
+                        singleLine    = true,
+                        modifier      = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                    )
+                }
+
+                // ── Filtri ─────────────────────────────────────────────────────
+                item {
+                    LazyRow(
+                        contentPadding      = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        items(listOf("Tutte", "Fisse", "Variabili", "Personali")) { f ->
+                            FilterChip(
+                                selected = filtro == f,
+                                onClick  = { filtro = f },
+                                label    = { Text(f) },
+                            )
+                        }
+                    }
+                }
+
+                if (speseFiltrate.isNotEmpty()) {
                     item {
-                        val totale = state.spese.sumOf { it.importo }
+                        val totale = speseFiltrate.sumOf { it.importo }
                         Text(
-                            text     = "Totale: ${NumberFormat.getCurrencyInstance(Locale.ITALY).format(totale)}  ·  ${state.spese.size} operazioni",
+                            text     = "Totale: ${NumberFormat.getCurrencyInstance(Locale.ITALY).format(totale)}  ·  ${speseFiltrate.size} operazioni",
                             style    = MaterialTheme.typography.bodySmall,
                             color    = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
@@ -391,10 +442,13 @@ fun SpesaListContent(
                         HorizontalDivider()
                     }
                 }
-                if (state.spese.isEmpty()) {
+                if (speseFiltrate.isEmpty()) {
                     item {
                         Text(
-                            text      = "Nessuna spesa questo periodo.\nPremi + per aggiungerne una.",
+                            text      = if (query.isNotEmpty() || filtro != "Tutte")
+                                "Nessuna spesa corrisponde ai filtri."
+                            else
+                                "Nessuna spesa questo periodo.\nPremi + per aggiungerne una.",
                             style     = MaterialTheme.typography.bodyMedium,
                             color     = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
@@ -402,7 +456,7 @@ fun SpesaListContent(
                         )
                     }
                 } else {
-                    items(state.spese, key = { it.id }) { spesa ->
+                    items(speseFiltrate, key = { it.id }) { spesa ->
                         val categoria = remember(spesa.categoriaId, state.categorie) {
                             state.categorie.find { it.id == spesa.categoriaId }
                         }

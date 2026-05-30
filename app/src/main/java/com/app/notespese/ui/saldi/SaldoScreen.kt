@@ -1,5 +1,6 @@
 package com.app.notespese.ui.saldi
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,7 +30,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -112,6 +112,7 @@ fun SaldoScreen(
                 onConfermaPagamento = viewModel::confermaPagamento,
                 onMesePrecedente    = viewModel::mesePrecedente,
                 onMeseSuccessivo    = viewModel::meseSuccessivo,
+                onTornaAdOggi       = viewModel::tornaAdOggi,
             )
         }
     }
@@ -129,6 +130,7 @@ private fun SaldoContent(
     onConfermaPagamento: (String) -> Unit,
     onMesePrecedente: () -> Unit,
     onMeseSuccessivo: () -> Unit,
+    onTornaAdOggi: () -> Unit,
 ) {
     Scaffold(
         topBar = {
@@ -152,6 +154,7 @@ private fun SaldoContent(
             onConfermaPagamento = onConfermaPagamento,
             onMesePrecedente    = onMesePrecedente,
             onMeseSuccessivo    = onMeseSuccessivo,
+            onTornaAdOggi       = onTornaAdOggi,
         )
     }
 }
@@ -167,6 +170,7 @@ private fun SaldoLazyContent(
     onConfermaPagamento: (String) -> Unit,
     onMesePrecedente: () -> Unit,
     onMeseSuccessivo: () -> Unit,
+    onTornaAdOggi: () -> Unit,
 ) {
     val saldiAttivi  = state.saldi.filter { !it.isSaldato }
     val saldiChiusi  = state.saldi.filter {  it.isSaldato }
@@ -191,39 +195,20 @@ private fun SaldoLazyContent(
                         val fmt = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ITALIAN)
                         LocalDate.of(state.anno, state.mese, 1).format(fmt).replaceFirstChar { it.uppercase() }
                     }
-                    Text(etichetta, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        text       = etichetta,
+                        style      = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier   = Modifier.clickable(onClick = onTornaAdOggi),
+                    )
                     IconButton(onClick = onMeseSuccessivo) {
                         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Mese successivo")
                     }
                 }
             }
 
-            // ── Bottone calcola + config suddivisione ─────────────────────────
+            // ── Suddivisione + Ricalcola ──────────────────────────────────────
             item {
-                ElevatedButton(
-                    onClick  = onCalcola,
-                    enabled  = !caricamento,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-                ) {
-                    if (caricamento) {
-                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                        Spacer(Modifier.width(8.dp))
-                    } else {
-                        Icon(Icons.Default.Calculate, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                    }
-                    Text("Ricalcola saldi del mese")
-                }
-                if (azioneEsito is SaldoViewModel.AzioneEsito.Errore) {
-                    Text(
-                        text     = (azioneEsito as SaldoViewModel.AzioneEsito.Errore).msg,
-                        color    = MaterialTheme.colorScheme.error,
-                        style    = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                    )
-                }
-
-                // Suddivisione row
                 val splitLabel = when (state.meseConfig?.modalitaSplit) {
                     ModalitaSplit.CINQUANTA.name      -> "Equa (50/50)"
                     ModalitaSplit.COEFFICIENTE.name   -> "Coefficienti"
@@ -237,11 +222,29 @@ private fun SaldoLazyContent(
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text(
-                        text  = "Suddivisione: $splitLabel",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        text     = "Suddivisione: $splitLabel",
+                        style    = MaterialTheme.typography.bodySmall,
+                        color    = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f),
                     )
-                    TextButton(onClick = onApriSplitDialog) { Text("Modifica") }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        TextButton(onClick = onApriSplitDialog) { Text("Modifica") }
+                        IconButton(onClick = onCalcola, enabled = !caricamento) {
+                            if (caricamento) {
+                                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                            } else {
+                                Icon(Icons.Default.Calculate, contentDescription = "Ricalcola saldi")
+                            }
+                        }
+                    }
+                }
+                if (azioneEsito is SaldoViewModel.AzioneEsito.Errore) {
+                    Text(
+                        text     = (azioneEsito as SaldoViewModel.AzioneEsito.Errore).msg,
+                        color    = MaterialTheme.colorScheme.error,
+                        style    = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    )
                 }
 
                 HorizontalDivider()
@@ -528,6 +531,7 @@ fun SaldoTabContent(
                 onConfermaPagamento = viewModel::confermaPagamento,
                 onMesePrecedente    = viewModel::mesePrecedente,
                 onMeseSuccessivo    = viewModel::meseSuccessivo,
+                onTornaAdOggi       = viewModel::tornaAdOggi,
             )
         }
     }

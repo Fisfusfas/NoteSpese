@@ -14,15 +14,16 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -30,21 +31,25 @@ import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.app.notespese.ui.common.CategoriaSelector
+import java.time.Instant
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -63,6 +68,7 @@ fun AggiungiEntrataScreen(
     val membri    by viewModel.membri.collectAsStateWithLifecycle()
 
     var dropdownExpanded by remember { mutableStateOf(false) }
+    var showDatePicker   by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -84,6 +90,20 @@ fun AggiungiEntrataScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+
+            // ── Importo rapido ─────────────────────────────────────────────────
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(5, 10, 20, 50, 100).forEach { amount ->
+                    FilterChip(
+                        selected = viewModel.importoText == amount.toString(),
+                        onClick  = {
+                            viewModel.importoText  = amount.toString()
+                            viewModel.erroreImporto = false
+                        },
+                        label    = { Text("€$amount") },
+                    )
+                }
+            }
 
             // ── Importo ────────────────────────────────────────────────────────
             OutlinedTextField(
@@ -107,7 +127,7 @@ fun AggiungiEntrataScreen(
             )
 
             // ── Chi ha ricevuto ────────────────────────────────────────────────
-            if (membri.isNotEmpty()) {
+            if (membri.size > 1) {
                 ExposedDropdownMenuBox(
                     expanded         = dropdownExpanded,
                     onExpandedChange = { dropdownExpanded = it },
@@ -139,33 +159,22 @@ fun AggiungiEntrataScreen(
                 }
             }
 
-            // ── Mese / Anno ────────────────────────────────────────────────────
-            val etichettaMese = remember(viewModel.mese, viewModel.anno) {
-                val fmt = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ITALIAN)
-                java.time.LocalDate.of(viewModel.anno, viewModel.mese, 1)
-                    .format(fmt).replaceFirstChar { it.uppercase() }
+            // ── Data ───────────────────────────────────────────────────────────
+            val dataLabel = remember(viewModel.dataSelezionata) {
+                DateTimeFormatter.ofPattern("d MMMM yyyy", Locale.ITALIAN).format(viewModel.dataSelezionata)
             }
-            Column {
-                Text(
-                    text  = "Mese di competenza",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Row(
-                    modifier          = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    IconButton(onClick = viewModel::mesePrecedente) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Mese precedente")
+            OutlinedTextField(
+                value         = dataLabel,
+                onValueChange = {},
+                readOnly      = true,
+                label         = { Text("Data") },
+                trailingIcon  = {
+                    IconButton(onClick = { showDatePicker = true }) {
+                        Icon(Icons.Default.CalendarToday, contentDescription = "Scegli data")
                     }
-                    Text(etichettaMese, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
-                    IconButton(onClick = viewModel::meseSuccessivo) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Mese successivo")
-                    }
-                }
-                HorizontalDivider()
-            }
+                },
+                modifier      = Modifier.fillMaxWidth(),
+            )
 
             // ── Note ───────────────────────────────────────────────────────────
             OutlinedTextField(
@@ -199,6 +208,30 @@ fun AggiungiEntrataScreen(
             }
 
             Spacer(Modifier.height(8.dp))
+        }
+    }
+
+    // ── DatePickerDialog ───────────────────────────────────────────────────────
+    if (showDatePicker) {
+        val initialMillis = viewModel.dataSelezionata
+            .atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = initialMillis)
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton    = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let { millis ->
+                        viewModel.dataSelezionata = Instant.ofEpochMilli(millis)
+                            .atZone(ZoneId.systemDefault()).toLocalDate()
+                    }
+                    showDatePicker = false
+                }) { Text("OK") }
+            },
+            dismissButton    = {
+                TextButton(onClick = { showDatePicker = false }) { Text("Annulla") }
+            },
+        ) {
+            DatePicker(state = datePickerState)
         }
     }
 }
