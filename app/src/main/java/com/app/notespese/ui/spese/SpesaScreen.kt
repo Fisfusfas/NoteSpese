@@ -261,7 +261,7 @@ private fun RigaSpesa(spesa: Spesa, categoria: Categoria?, onClick: () -> Unit) 
         } ?: ""
     }
     ListItem(
-        modifier          = Modifier.clickable(onClick = onClick),
+        modifier          = Modifier.background(MaterialTheme.colorScheme.surface).clickable(onClick = onClick),
         headlineContent   = {
             Text(spesa.descrizione.ifBlank { "Spesa" }, maxLines = 1, overflow = TextOverflow.Ellipsis)
         },
@@ -283,26 +283,28 @@ private fun RigaSpesa(spesa: Spesa, categoria: Categoria?, onClick: () -> Unit) 
                             modifier = Modifier.height(20.dp),
                         )
                     }
-                    if (!spesa.condivisa) {
-                        SuggestionChip(
-                            onClick  = {},
-                            label    = { Text("Personale", style = MaterialTheme.typography.labelSmall) },
-                            colors   = SuggestionChipDefaults.suggestionChipColors(
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                            ),
-                            modifier = Modifier.height(20.dp),
-                        )
-                    }
-                    if (spesa.tipo == TipoSpesa.FISSA.name) {
-                        SuggestionChip(
-                            onClick  = {},
-                            label    = { Text("Fissa", style = MaterialTheme.typography.labelSmall) },
-                            colors   = SuggestionChipDefaults.suggestionChipColors(
-                                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                            ),
-                            modifier = Modifier.height(20.dp),
-                        )
-                    }
+                    SuggestionChip(
+                        onClick  = {},
+                        label    = { Text(if (spesa.condivisa) "Condivisa" else "Personale", style = MaterialTheme.typography.labelSmall) },
+                        colors   = SuggestionChipDefaults.suggestionChipColors(
+                            containerColor = if (spesa.condivisa)
+                                MaterialTheme.colorScheme.primaryContainer
+                            else
+                                MaterialTheme.colorScheme.secondaryContainer,
+                        ),
+                        modifier = Modifier.height(20.dp),
+                    )
+                    SuggestionChip(
+                        onClick  = {},
+                        label    = { Text(if (spesa.tipo == TipoSpesa.FISSA.name) "Fissa" else "Variabile", style = MaterialTheme.typography.labelSmall) },
+                        colors   = SuggestionChipDefaults.suggestionChipColors(
+                            containerColor = if (spesa.tipo == TipoSpesa.FISSA.name)
+                                MaterialTheme.colorScheme.tertiaryContainer
+                            else
+                                MaterialTheme.colorScheme.surfaceVariant,
+                        ),
+                        modifier = Modifier.height(20.dp),
+                    )
                 }
                 if (spesa.note.isNotBlank()) {
                     Text(

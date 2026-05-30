@@ -128,7 +128,10 @@ fun AppNavigation(
                 navArgument("anno")     { type = NavType.IntType },
             )
         ) {
-            AnalisiMeseScreen(onNavigateBack = { navController.popBackStack() })
+            AnalisiMeseScreen(
+                onNavigateBack  = { navController.popBackStack() },
+                onModificaSpesa = { gId, sId -> navController.navigate(Screen.ModificaSpesa.withIds(gId, sId)) },
+            )
         }
 
         // ── Analisi entrate mese ───────────────────────────────────────────────

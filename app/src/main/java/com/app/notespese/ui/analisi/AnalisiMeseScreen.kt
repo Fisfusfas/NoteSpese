@@ -76,6 +76,7 @@ private fun colorePagante(idx: Int): Color = PALETTE_PAGANTI[idx % PALETTE_PAGAN
 @Composable
 fun AnalisiMeseScreen(
     onNavigateBack: () -> Unit,
+    onModificaSpesa: (gruppoId: String, spesaId: String) -> Unit = { _, _ -> },
     viewModel: AnalisiMeseViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -115,8 +116,8 @@ fun AnalisiMeseScreen(
                     }
 
                     when (selectedTab) {
-                        0 -> TabCondivise(state = state)
-                        1 -> TabPersonali(state = state)
+                        0 -> TabCondivise(state = state, onModificaSpesa = { spesaId -> onModificaSpesa(viewModel.gruppoId, spesaId) })
+                        1 -> TabPersonali(state = state, onModificaSpesa = { spesaId -> onModificaSpesa(viewModel.gruppoId, spesaId) })
                     }
                 }
             }
@@ -127,7 +128,7 @@ fun AnalisiMeseScreen(
 // ── Tab Condivise ──────────────────────────────────────────────────────────────
 
 @Composable
-private fun TabCondivise(state: AnalisiMeseViewModel.UiState.Successo) {
+private fun TabCondivise(state: AnalisiMeseViewModel.UiState.Successo, onModificaSpesa: (String) -> Unit) {
     val spese  = remember(state.spese) { state.spese.filter { it.condivisa } }
     val totale = remember(spese) { spese.sumOf { it.importo } }
     val fmt    = NumberFormat.getCurrencyInstance(Locale.ITALY)
@@ -199,7 +200,7 @@ private fun TabCondivise(state: AnalisiMeseViewModel.UiState.Successo) {
                     ) {
                         Spacer(Modifier.height(2.dp))
                         gruppo.sortedByDescending { it.data?.seconds ?: 0 }.forEach { spesa ->
-                            RigaSpesaDettaglio(spesa = spesa, membri = state.membri)
+                            RigaSpesaDettaglio(spesa = spesa, membri = state.membri, onClick = { onModificaSpesa(spesa.id) })
                         }
                     }
                 }
@@ -233,7 +234,7 @@ private fun TabCondivise(state: AnalisiMeseViewModel.UiState.Successo) {
                             verticalArrangement = Arrangement.spacedBy(4.dp),
                         ) {
                             gruppo.sortedByDescending { it.data?.seconds ?: 0 }.forEach { spesa ->
-                                RigaSpesaDettaglio(spesa = spesa, membri = state.membri)
+                                RigaSpesaDettaglio(spesa = spesa, membri = state.membri, onClick = { onModificaSpesa(spesa.id) })
                             }
                         }
                     }
@@ -265,7 +266,7 @@ private fun TabCondivise(state: AnalisiMeseViewModel.UiState.Successo) {
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     speseFisse.forEach { spesa ->
-                        RigaSpesaDettaglio(spesa = spesa, membri = state.membri)
+                        RigaSpesaDettaglio(spesa = spesa, membri = state.membri, onClick = { onModificaSpesa(spesa.id) })
                     }
                 }
             }
@@ -288,7 +289,7 @@ private fun TabCondivise(state: AnalisiMeseViewModel.UiState.Successo) {
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     speseVariabili.forEach { spesa ->
-                        RigaSpesaDettaglio(spesa = spesa, membri = state.membri)
+                        RigaSpesaDettaglio(spesa = spesa, membri = state.membri, onClick = { onModificaSpesa(spesa.id) })
                     }
                 }
             }
@@ -299,7 +300,7 @@ private fun TabCondivise(state: AnalisiMeseViewModel.UiState.Successo) {
 // ── Tab Personali ──────────────────────────────────────────────────────────────
 
 @Composable
-private fun TabPersonali(state: AnalisiMeseViewModel.UiState.Successo) {
+private fun TabPersonali(state: AnalisiMeseViewModel.UiState.Successo, onModificaSpesa: (String) -> Unit) {
     val spese = remember(state.spese) { state.spese.filter { !it.condivisa } }
     val fmt   = NumberFormat.getCurrencyInstance(Locale.ITALY)
 
@@ -394,7 +395,7 @@ private fun TabPersonali(state: AnalisiMeseViewModel.UiState.Successo) {
                     HorizontalDivider(modifier = Modifier.padding(horizontal = 14.dp))
                     Column(modifier = Modifier.padding(start = 28.dp, end = 14.dp, bottom = 8.dp)) {
                         ss.sortedByDescending { it.data?.seconds ?: 0 }.forEach { spesa ->
-                            RigaSpesaDettaglio(spesa = spesa, membri = state.membri)
+                            RigaSpesaDettaglio(spesa = spesa, membri = state.membri, onClick = { onModificaSpesa(spesa.id) })
                             Spacer(Modifier.height(4.dp))
                         }
                     }
@@ -571,7 +572,7 @@ private fun CardCategoria(
 // ── Riga spesa dettaglio ───────────────────────────────────────────────────────
 
 @Composable
-private fun RigaSpesaDettaglio(spesa: Spesa, membri: List<Membro>) {
+private fun RigaSpesaDettaglio(spesa: Spesa, membri: List<Membro>, onClick: (() -> Unit)? = null) {
     val dataLabel = remember(spesa.data) {
         spesa.data?.toDate()?.let { date ->
             Instant.ofEpochMilli(date.time).atZone(ZoneId.systemDefault()).toLocalDate()
@@ -585,7 +586,7 @@ private fun RigaSpesaDettaglio(spesa: Spesa, membri: List<Membro>) {
     val fmt = NumberFormat.getCurrencyInstance(Locale.ITALY)
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().let { if (onClick != null) it.clickable(onClick = onClick) else it },
         colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape    = RoundedCornerShape(8.dp),
     ) {
@@ -611,16 +612,28 @@ private fun RigaSpesaDettaglio(spesa: Spesa, membri: List<Membro>) {
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    if (spesa.tipo == TipoSpesa.FISSA.name) {
-                        SuggestionChip(
-                            onClick = {},
-                            label   = { Text("Fissa", style = MaterialTheme.typography.labelSmall) },
-                            colors  = SuggestionChipDefaults.suggestionChipColors(
-                                containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f),
-                            ),
-                            modifier = Modifier.height(18.dp),
-                        )
-                    }
+                    SuggestionChip(
+                        onClick  = {},
+                        label    = { Text(if (spesa.condivisa) "Condivisa" else "Personale", style = MaterialTheme.typography.labelSmall) },
+                        colors   = SuggestionChipDefaults.suggestionChipColors(
+                            containerColor = if (spesa.condivisa)
+                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
+                            else
+                                MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f),
+                        ),
+                        modifier = Modifier.height(18.dp),
+                    )
+                    SuggestionChip(
+                        onClick  = {},
+                        label    = { Text(if (spesa.tipo == TipoSpesa.FISSA.name) "Fissa" else "Variabile", style = MaterialTheme.typography.labelSmall) },
+                        colors   = SuggestionChipDefaults.suggestionChipColors(
+                            containerColor = if (spesa.tipo == TipoSpesa.FISSA.name)
+                                MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.7f)
+                            else
+                                MaterialTheme.colorScheme.surfaceVariant,
+                        ),
+                        modifier = Modifier.height(18.dp),
+                    )
                 }
                 if (spesa.note.isNotBlank()) {
                     Text(
