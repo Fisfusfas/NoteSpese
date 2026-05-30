@@ -164,7 +164,7 @@ private fun QuickSpesaBottomSheet(
                 categorie              = categorie,
                 categoriaSelezionataId = viewModel.categoriaId,
                 onSeleziona            = { viewModel.categoriaId = it },
-                onCreaCategoria        = { _, _ -> },
+                onCreaCategoria        = { _, _, _ -> },
             )
 
             Spacer(Modifier.height(8.dp))
