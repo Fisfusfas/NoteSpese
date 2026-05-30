@@ -1,7 +1,9 @@
 package com.app.notespese.data.repository
 
 import com.app.notespese.data.model.Entrata
+import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -30,6 +32,18 @@ class FirebaseEntrataRepository @Inject constructor(
         val listener = entrateRef(gruppoId)
             .whereEqualTo("anno", anno)
             .whereEqualTo("mese", mese)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) { close(error); return@addSnapshotListener }
+                trySend(snapshot?.toObjects(Entrata::class.java) ?: emptyList())
+            }
+        awaitClose { listener.remove() }
+    }
+
+    override fun osservaEntratePerPeriodo(gruppoId: String, start: Timestamp, end: Timestamp): Flow<List<Entrata>> = callbackFlow {
+        val listener = entrateRef(gruppoId)
+            .whereGreaterThanOrEqualTo("data", start)
+            .whereLessThan("data", end)
+            .orderBy("data", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) { close(error); return@addSnapshotListener }
                 trySend(snapshot?.toObjects(Entrata::class.java) ?: emptyList())

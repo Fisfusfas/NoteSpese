@@ -135,7 +135,7 @@ fun AggiungiSpesaScreen(
                 categorie              = categorie,
                 categoriaSelezionataId = viewModel.categoriaId,
                 onSeleziona            = { viewModel.categoriaId = it },
-                onCreaCategoria        = { nome, colore -> viewModel.creaCategoria(nome, colore) },
+                onCreaCategoria        = { nome, colore, icona -> viewModel.creaCategoria(nome, colore, icona) },
             )
 
             // ── Chi paga ───────────────────────────────────────────────────────

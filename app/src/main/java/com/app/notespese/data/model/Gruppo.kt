@@ -17,4 +17,5 @@ data class Gruppo(
     val colore: String = "#1565C0",
     val modalitaSplitDefault: String = ModalitaSplit.COEFFICIENTE.name,
     val membroIds: List<String> = emptyList(),
+    val giornoInizioMese: Int = 1,
 )

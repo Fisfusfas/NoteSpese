@@ -43,7 +43,7 @@ fun CategoriaSelector(
     categorie: List<Categoria>,
     categoriaSelezionataId: String,
     onSeleziona: (String) -> Unit,
-    onCreaCategoria: (nome: String, colore: String) -> Unit,
+    onCreaCategoria: (nome: String, colore: String, icona: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var mostraDialog by rememberSaveable { mutableStateOf(false) }
@@ -94,8 +94,8 @@ fun CategoriaSelector(
 
     if (mostraDialog) {
         DialogNuovaCategoria(
-            onConferma = { nome, colore ->
-                onCreaCategoria(nome, colore)
+            onConferma = { nome, colore, icona ->
+                onCreaCategoria(nome, colore, icona)
                 mostraDialog = false
             },
             onDismiss = { mostraDialog = false },
@@ -105,11 +105,12 @@ fun CategoriaSelector(
 
 @Composable
 private fun DialogNuovaCategoria(
-    onConferma: (nome: String, colore: String) -> Unit,
+    onConferma: (nome: String, colore: String, icona: String) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var nome by rememberSaveable { mutableStateOf("") }
     var coloreSelezionato by remember { mutableStateOf(COLORI_GRUPPO.first()) }
+    var iconaSelezionata by remember { mutableStateOf("label") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -150,11 +151,34 @@ private fun DialogNuovaCategoria(
                         )
                     }
                 }
+                Spacer(Modifier.height(12.dp))
+                Text("Icona", style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(6.dp))
+                Row(
+                    modifier              = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    ICONE_CATEGORIA.forEach { (key, icon) ->
+                        FilterChip(
+                            selected = key == iconaSelezionata,
+                            onClick  = { iconaSelezionata = key },
+                            label    = { Text("") },
+                            leadingIcon = {
+                                if (key == iconaSelezionata)
+                                    Icon(Icons.Default.Check, null, modifier = Modifier.size(FilterChipDefaults.IconSize))
+                                else
+                                    Icon(icon, null, modifier = Modifier.size(FilterChipDefaults.IconSize))
+                            },
+                            modifier = Modifier.size(40.dp),
+                        )
+                    }
+                }
             }
         },
         confirmButton = {
             TextButton(
-                onClick  = { if (nome.isNotBlank()) onConferma(nome, coloreSelezionato) },
+                onClick  = { if (nome.isNotBlank()) onConferma(nome, coloreSelezionato, iconaSelezionata) },
                 enabled  = nome.isNotBlank(),
             ) { Text("Crea") }
         },

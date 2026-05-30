@@ -59,6 +59,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.flow.collect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -82,6 +83,11 @@ fun ListaGruppiScreen(
     viewModel: ListaGruppiViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // Auto-naviga al gruppo di default (gruppo unico o widget selezionato)
+    LaunchedEffect(Unit) {
+        viewModel.navigaToGruppo.collect { gruppoId -> onApriGruppo(gruppoId) }
+    }
 
     // Naviga al gruppo dopo accettazione invito
     LaunchedEffect(viewModel.invitoAccettato) {

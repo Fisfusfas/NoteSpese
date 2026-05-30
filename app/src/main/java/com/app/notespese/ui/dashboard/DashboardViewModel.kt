@@ -10,6 +10,9 @@ import com.app.notespese.data.model.Spesa
 import com.app.notespese.data.repository.EntrataRepository
 import com.app.notespese.data.repository.GruppoRepository
 import com.app.notespese.data.repository.SpesaRepository
+import com.app.notespese.util.calcolaPeriodo
+import com.app.notespese.util.etichettaPeriodo
+import com.app.notespese.util.toTimestamp
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -17,6 +20,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import java.time.YearMonth
 import javax.inject.Inject
@@ -38,6 +42,9 @@ class DashboardViewModel @Inject constructor(
             val membri: List<Membro>,
             val speseDelMese: List<Spesa>,
             val entrateDelMese: List<Entrata>,
+            val totaleSpeseTotali: Double,
+            val totaleEntrateTotali: Double,
+            val periodoLabel: String,
             val mese: Int,
             val anno: Int,
         ) : UiState
@@ -47,16 +54,44 @@ class DashboardViewModel @Inject constructor(
     private val now = YearMonth.now()
     private val _meseAnno = MutableStateFlow(now.monthValue to now.year)
 
-    val uiState: StateFlow<UiState> = _meseAnno
-        .flatMapLatest { (mese, anno) ->
+    val uiState: StateFlow<UiState> = combine(
+        _meseAnno,
+        gruppoRepository.osservaGruppo(gruppoId),
+    ) { meseAnno, gruppo -> meseAnno to gruppo }
+        .flatMapLatest { (meseAnno, gruppo) ->
+            if (gruppo == null) return@flatMapLatest flowOf(UiState.Errore("Gruppo non trovato"))
+            val (mese, anno) = meseAnno
+            val giornoInizio = gruppo.giornoInizioMese
+
+            val speseFlow = if (giornoInizio <= 1) {
+                spesaRepository.osservaSpesePerMese(gruppoId, mese, anno)
+            } else {
+                val (start, end) = calcolaPeriodo(giornoInizio, mese, anno)
+                spesaRepository.osservaSpesePerPeriodo(
+                    gruppoId,
+                    toTimestamp(start),
+                    toTimestamp(end.plusDays(1))
+                )
+            }
+
             combine(
-                gruppoRepository.osservaGruppo(gruppoId),
                 gruppoRepository.osservaMembri(gruppoId),
-                spesaRepository.osservaSpesePerMese(gruppoId, mese, anno),
+                speseFlow,
                 entrataRepository.osservaEntratePerMese(gruppoId, mese, anno),
-            ) { gruppo, membri, spese, entrate ->
-                if (gruppo == null) UiState.Errore("Gruppo non trovato")
-                else UiState.Successo(gruppo, membri, spese, entrate, mese, anno)
+                spesaRepository.osservaSpese(gruppoId),
+                entrataRepository.osservaEntrate(gruppoId),
+            ) { membri, spese, entrate, tutteSpese, tutteEntrate ->
+                UiState.Successo(
+                    gruppo               = gruppo,
+                    membri               = membri,
+                    speseDelMese         = spese,
+                    entrateDelMese       = entrate,
+                    totaleSpeseTotali    = tutteSpese.sumOf { it.importo },
+                    totaleEntrateTotali  = tutteEntrate.sumOf { it.importo },
+                    periodoLabel         = etichettaPeriodo(giornoInizio, mese, anno),
+                    mese                 = mese,
+                    anno                 = anno,
+                )
             }
         }
         .catch { e -> emit(UiState.Errore(e.message ?: "Errore sconosciuto")) }

@@ -11,6 +11,9 @@ sealed class Screen(val route: String) {
     data object Profilo      : Screen("profilo")
 
     // ── Gruppo (riceve gruppoId come path param) ───────────────────────────────
+    data object GruppoHome        : Screen("gruppo/{gruppoId}") {
+        fun withId(id: String) = "gruppo/$id"
+    }
     data object Dashboard         : Screen("gruppo/{gruppoId}/dashboard") {
         fun withId(id: String) = "gruppo/$id/dashboard"
     }

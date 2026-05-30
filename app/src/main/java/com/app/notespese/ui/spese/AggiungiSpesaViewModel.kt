@@ -156,9 +156,9 @@ class AggiungiSpesaViewModel @Inject constructor(
         }
     }
 
-    fun creaCategoria(nome: String, colore: String) {
+    fun creaCategoria(nome: String, colore: String, icona: String = "label") {
         viewModelScope.launch {
-            val cat = Categoria(nome = nome.trim(), icona = "label", colore = colore, tipo = TipoCategoria.SPESA.name)
+            val cat = Categoria(nome = nome.trim(), icona = icona, colore = colore, tipo = TipoCategoria.SPESA.name)
             categoriaRepository.aggiungiCategoria(gruppoId, cat).onSuccess { id ->
                 categoriaId = id
             }

@@ -130,12 +130,7 @@ private fun EntrataContent(
                     IconButton(onClick = onMesePrecedente) {
                         Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Mese precedente")
                     }
-                    val etichetta = remember(state.mese, state.anno) {
-                        val fmt = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ITALIAN)
-                        java.time.LocalDate.of(state.anno, state.mese, 1)
-                            .format(fmt).replaceFirstChar { it.uppercase() }
-                    }
-                    Text(etichetta, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text(state.periodoLabel, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     IconButton(onClick = onMeseSuccessivo) {
                         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Mese successivo")
                     }
@@ -264,4 +259,96 @@ private fun RigaEntrata(
         },
     )
     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+}
+
+// ── Tab content (no Scaffold, for use inside GruppoHomeScreen) ────────────────
+
+@Composable
+fun EntrataListContent(
+    onAggiungiEntrata: () -> Unit,
+    onModificaEntrata: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: EntrataViewModel = hiltViewModel(),
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    when (val state = uiState) {
+        is EntrataViewModel.UiState.Caricamento -> {
+            Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+        }
+        is EntrataViewModel.UiState.Errore -> {
+            Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(state.messaggio, color = MaterialTheme.colorScheme.error)
+            }
+        }
+        is EntrataViewModel.UiState.Successo -> {
+            Box(modifier.fillMaxSize()) {
+                LazyColumn(
+                    modifier       = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 88.dp),
+                ) {
+                    item {
+                        Row(
+                            modifier              = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment     = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            IconButton(onClick = viewModel::mesePrecedente) {
+                                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Periodo precedente")
+                            }
+                            Text(state.periodoLabel, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                            IconButton(onClick = viewModel::meseSuccessivo) {
+                                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Periodo successivo")
+                            }
+                        }
+                    }
+                    if (state.entrate.isNotEmpty()) {
+                        item {
+                            val totale = state.entrate.sumOf { it.importo }
+                            Text(
+                                text     = "Totale: ${NumberFormat.getCurrencyInstance(Locale.ITALY).format(totale)}  ·  ${state.entrate.size} operazioni",
+                                style    = MaterialTheme.typography.bodySmall,
+                                color    = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                            )
+                            HorizontalDivider()
+                        }
+                    }
+                    if (state.entrate.isEmpty()) {
+                        item {
+                            Text(
+                                text      = "Nessuna entrata questo periodo.\nPremi + per aggiungerne una.",
+                                style     = MaterialTheme.typography.bodyMedium,
+                                color     = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                                modifier  = Modifier.fillMaxWidth().padding(32.dp),
+                            )
+                        }
+                    } else {
+                        items(state.entrate, key = { it.id }) { entrata ->
+                            val categoria = remember(entrata.categoriaId, state.categorie) {
+                                state.categorie.find { it.id == entrata.categoriaId }
+                            }
+                            val membro = remember(entrata.persona, state.membri) {
+                                state.membri.find { it.userId == entrata.persona }
+                            }
+                            EntrataSwipeItem(
+                                entrata    = entrata,
+                                categoria  = categoria,
+                                membro     = membro,
+                                onDelete   = { viewModel.eliminaEntrata(entrata.id) },
+                                onModifica = { onModificaEntrata(entrata.id) },
+                            )
+                        }
+                    }
+                }
+                FloatingActionButton(
+                    onClick  = onAggiungiEntrata,
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Aggiungi entrata")
+                }
+            }
+        }
+    }
 }

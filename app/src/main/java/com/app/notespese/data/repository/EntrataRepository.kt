@@ -1,6 +1,7 @@
 package com.app.notespese.data.repository
 
 import com.app.notespese.data.model.Entrata
+import com.google.firebase.Timestamp
 import kotlinx.coroutines.flow.Flow
 
 interface EntrataRepository {
@@ -8,6 +9,8 @@ interface EntrataRepository {
     fun osservaEntrate(gruppoId: String): Flow<List<Entrata>>
 
     fun osservaEntratePerMese(gruppoId: String, mese: Int, anno: Int): Flow<List<Entrata>>
+
+    fun osservaEntratePerPeriodo(gruppoId: String, start: Timestamp, end: Timestamp): Flow<List<Entrata>>
 
     suspend fun aggiungiEntrata(gruppoId: String, entrata: Entrata): Result<String>
 

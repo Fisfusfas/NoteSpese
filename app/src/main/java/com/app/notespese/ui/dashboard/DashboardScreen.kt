@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Balance
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Group
@@ -59,10 +60,11 @@ import com.app.notespese.ui.gruppi.iconaPerNome
 import com.app.notespese.ui.gruppi.parseColore
 import java.text.NumberFormat
 import java.time.Instant
-import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+
+// ── Standalone screen (with own Scaffold) ─────────────────────────────────────
 
 @Composable
 fun DashboardScreen(
@@ -91,7 +93,7 @@ fun DashboardScreen(
             }
         }
         is DashboardViewModel.UiState.Successo -> {
-            DashboardContent(
+            DashboardFullContent(
                 state                = state,
                 onNavigateBack       = onNavigateBack,
                 onApriSpese          = { onApriSpese(gruppoId) },
@@ -108,25 +110,178 @@ fun DashboardScreen(
     }
 }
 
+// ── Tab content (no Scaffold, used inside GruppoHomeScreen) ───────────────────
+
+@Composable
+fun DashboardTabContent(
+    onApriAnalisi: (Int, Int) -> Unit,
+    onApriAnalisiEntrate: (Int, Int) -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: DashboardViewModel = hiltViewModel(),
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    when (val state = uiState) {
+        is DashboardViewModel.UiState.Caricamento -> {
+            Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        }
+        is DashboardViewModel.UiState.Errore -> {
+            Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(state.messaggio, color = MaterialTheme.colorScheme.error)
+            }
+        }
+        is DashboardViewModel.UiState.Successo -> {
+            DashboardPageContent(
+                state                = state,
+                modifier             = modifier,
+                onApriAnalisi        = { onApriAnalisi(state.mese, state.anno) },
+                onApriAnalisiEntrate = { onApriAnalisiEntrate(state.mese, state.anno) },
+                onMesePrecedente     = viewModel::mesePrecedente,
+                onMeseSuccessivo     = viewModel::meseSuccessivo,
+            )
+        }
+    }
+}
+
+// ── Shared page content ────────────────────────────────────────────────────────
+
+@Composable
+private fun DashboardPageContent(
+    state: DashboardViewModel.UiState.Successo,
+    modifier: Modifier = Modifier,
+    onApriAnalisi: () -> Unit,
+    onApriAnalisiEntrate: () -> Unit,
+    onMesePrecedente: () -> Unit,
+    onMeseSuccessivo: () -> Unit,
+) {
+    val totaleSpese    = state.speseDelMese.sumOf { it.importo }
+    val totaleEntrate  = state.entrateDelMese.sumOf { it.importo }
+    val saldo          = totaleEntrate - totaleSpese
+    val residuoTotale  = state.totaleEntrateTotali - state.totaleSpeseTotali
+    val coloreVerde    = Color(0xFF2E7D32)
+
+    LazyColumn(
+        modifier       = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(bottom = 24.dp),
+    ) {
+
+        // ── Selettore periodo ─────────────────────────────────────────────────
+        item {
+            SelectoreMese(
+                etichetta        = state.periodoLabel,
+                onMesePrecedente = onMesePrecedente,
+                onMeseSuccessivo = onMeseSuccessivo,
+            )
+        }
+
+        // ── Riepilogo ─────────────────────────────────────────────────────────
+        item {
+            Column(
+                modifier            = Modifier.padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    CardRiepilogo(
+                        modifier    = Modifier.weight(1f),
+                        label       = "Spese",
+                        valore      = formatEuro(totaleSpese),
+                        icona       = Icons.Default.ShoppingCart,
+                        coloreIcona = MaterialTheme.colorScheme.error,
+                        onClick     = onApriAnalisi,
+                    )
+                    CardRiepilogo(
+                        modifier    = Modifier.weight(1f),
+                        label       = "Entrate",
+                        valore      = formatEuro(totaleEntrate),
+                        icona       = Icons.Default.TrendingUp,
+                        coloreIcona = coloreVerde,
+                        onClick     = onApriAnalisiEntrate,
+                    )
+                }
+
+                // Saldo netto del periodo
+                CardSaldoRiga(
+                    label  = "Saldo del periodo",
+                    valore = saldo,
+                    coloreVerde = coloreVerde,
+                )
+
+                // Residuo lifetime (tutte le entrate - tutte le spese)
+                CardSaldoRiga(
+                    label  = "Residuo totale",
+                    valore = residuoTotale,
+                    coloreVerde = coloreVerde,
+                    icona = Icons.Default.AccountBalanceWallet,
+                )
+
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    CardRiepilogo(
+                        modifier    = Modifier.weight(1f),
+                        label       = "Operazioni",
+                        valore      = "${state.speseDelMese.size}",
+                        icona       = Icons.Default.Receipt,
+                        coloreIcona = MaterialTheme.colorScheme.tertiary,
+                    )
+                    CardRiepilogo(
+                        modifier    = Modifier.weight(1f),
+                        label       = "Membri",
+                        valore      = "${state.membri.size}",
+                        icona       = Icons.Default.Group,
+                        coloreIcona = MaterialTheme.colorScheme.secondary,
+                    )
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+        }
+
+        // ── Ultime spese ──────────────────────────────────────────────────────
+        if (state.speseDelMese.isNotEmpty()) {
+            item {
+                Text(
+                    text     = "Ultime spese",
+                    style    = MaterialTheme.typography.titleSmall,
+                    color    = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+            }
+            items(state.speseDelMese.take(5)) { spesa ->
+                RowSpesa(spesa = spesa, onClick = onApriAnalisi)
+            }
+            if (state.speseDelMese.size > 5) {
+                item {
+                    TextButton(
+                        onClick  = onApriAnalisi,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    ) {
+                        Text("Vedi tutte le ${state.speseDelMese.size} spese")
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ── Standalone full content (with Scaffold) ───────────────────────────────────
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DashboardContent(
+private fun DashboardFullContent(
     state: DashboardViewModel.UiState.Successo,
     onNavigateBack: () -> Unit,
     onApriSpese: () -> Unit,
-    onApriAnalisiEntrate: () -> Unit,
     onApriEntrate: () -> Unit,
     onApriSaldi: () -> Unit,
     onApriImpostazioni: () -> Unit,
     onApriGrafici: () -> Unit,
     onApriAnalisi: () -> Unit,
+    onApriAnalisiEntrate: () -> Unit,
     onMesePrecedente: () -> Unit,
     onMeseSuccessivo: () -> Unit,
 ) {
-    val gruppoColore  = parseColore(state.gruppo.colore)
-    val gruppoIcona   = iconaPerNome(state.gruppo.icona)
-    val totaleSpese   = state.speseDelMese.sumOf { it.importo }
-    val totaleEntrate = state.entrateDelMese.sumOf { it.importo }
+    val gruppoColore = parseColore(state.gruppo.colore)
+    val gruppoIcona  = iconaPerNome(state.gruppo.icona)
 
     Scaffold(
         topBar = {
@@ -137,24 +292,12 @@ private fun DashboardContent(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Box(
-                            modifier         = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape)
-                                .background(gruppoColore),
+                            modifier         = Modifier.size(32.dp).clip(CircleShape).background(gruppoColore),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Icon(
-                                imageVector        = gruppoIcona,
-                                contentDescription = null,
-                                tint               = Color.White,
-                                modifier           = Modifier.size(18.dp),
-                            )
+                            Icon(gruppoIcona, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
                         }
-                        Text(
-                            text     = state.gruppo.nome,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
+                        Text(state.gruppo.nome, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 },
                 navigationIcon = {
@@ -163,6 +306,9 @@ private fun DashboardContent(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onApriGrafici) {
+                        Icon(Icons.Default.BarChart, contentDescription = "Statistiche")
+                    }
                     IconButton(onClick = onApriImpostazioni) {
                         Icon(Icons.Default.Settings, contentDescription = "Impostazioni gruppo")
                     }
@@ -170,214 +316,81 @@ private fun DashboardContent(
             )
         }
     ) { innerPadding ->
-        LazyColumn(
-            modifier       = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-            contentPadding = PaddingValues(bottom = 24.dp),
-        ) {
-
-            // ── Selettore mese ────────────────────────────────────────────────
-            item {
-                SelectoreMese(
-                    mese             = state.mese,
-                    anno             = state.anno,
-                    onMesePrecedente = onMesePrecedente,
-                    onMeseSuccessivo = onMeseSuccessivo,
-                )
-            }
-
-            // ── Riepilogo ─────────────────────────────────────────────────────
-            item {
-                val saldo = totaleEntrate - totaleSpese
-                val coloreVerde = Color(0xFF2E7D32)
-                Column(
-                    modifier            = Modifier.padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        CardRiepilogo(
-                            modifier    = Modifier.weight(1f),
-                            label       = "Spese del mese",
-                            valore      = formatEuro(totaleSpese),
-                            icona       = Icons.Default.ShoppingCart,
-                            coloreIcona = MaterialTheme.colorScheme.error,
-                            onClick     = onApriAnalisi,
-                        )
-                        CardRiepilogo(
-                            modifier    = Modifier.weight(1f),
-                            label       = "Entrate del mese",
-                            valore      = formatEuro(totaleEntrate),
-                            icona       = Icons.Default.TrendingUp,
-                            coloreIcona = coloreVerde,
-                            onClick     = onApriAnalisiEntrate,
-                        )
-                    }
-                    // Saldo netto
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors   = CardDefaults.cardColors(
-                            containerColor = if (saldo >= 0)
-                                coloreVerde.copy(alpha = 0.1f)
-                            else
-                                MaterialTheme.colorScheme.errorContainer,
-                        ),
-                    ) {
-                        Row(
-                            modifier              = Modifier.fillMaxWidth().padding(12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment     = Alignment.CenterVertically,
-                        ) {
-                            Row(
-                                verticalAlignment     = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                Icon(
-                                    imageVector        = if (saldo >= 0) Icons.Default.TrendingUp else Icons.Default.TrendingDown,
-                                    contentDescription = null,
-                                    tint               = if (saldo >= 0) coloreVerde else MaterialTheme.colorScheme.error,
-                                    modifier           = Modifier.size(20.dp),
-                                )
-                                Text("Saldo del mese", style = MaterialTheme.typography.bodyMedium)
-                            }
-                            Text(
-                                text       = formatEuro(saldo),
-                                style      = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color      = if (saldo >= 0) coloreVerde else MaterialTheme.colorScheme.error,
-                            )
-                        }
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        CardRiepilogo(
-                            modifier    = Modifier.weight(1f),
-                            label       = "Operazioni",
-                            valore      = "${state.speseDelMese.size}",
-                            icona       = Icons.Default.Receipt,
-                            coloreIcona = MaterialTheme.colorScheme.tertiary,
-                        )
-                        CardRiepilogo(
-                            modifier    = Modifier.weight(1f),
-                            label       = "Membri",
-                            valore      = "${state.membri.size}",
-                            icona       = Icons.Default.Group,
-                            coloreIcona = MaterialTheme.colorScheme.secondary,
-                        )
-                    }
-                }
-                Spacer(Modifier.height(16.dp))
-            }
-
-            // ── Sezioni ───────────────────────────────────────────────────────
-            item {
-                Text(
-                    text     = "Sezioni",
-                    style    = MaterialTheme.typography.titleSmall,
-                    color    = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                )
-            }
-            item {
-                Column(
-                    modifier            = Modifier.padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        CardNavigazione(
-                            modifier  = Modifier.weight(1f),
-                            etichetta = "Spese",
-                            icona     = Icons.Default.ShoppingCart,
-                            colore    = gruppoColore,
-                            onClick   = onApriSpese,
-                        )
-                        CardNavigazione(
-                            modifier  = Modifier.weight(1f),
-                            etichetta = "Entrate",
-                            icona     = Icons.Default.TrendingUp,
-                            colore    = Color(0xFF2E7D32),
-                            onClick   = onApriEntrate,
-                        )
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        CardNavigazione(
-                            modifier  = Modifier.weight(1f),
-                            etichetta = "Saldi",
-                            icona     = Icons.Default.Balance,
-                            colore    = Color(0xFF6A1B9A),
-                            onClick   = onApriSaldi,
-                        )
-                        CardNavigazione(
-                            modifier  = Modifier.weight(1f),
-                            etichetta = "Statistiche",
-                            icona     = Icons.Default.BarChart,
-                            colore    = Color(0xFF00838F),
-                            onClick   = onApriGrafici,
-                        )
-                    }
-                }
-                Spacer(Modifier.height(16.dp))
-            }
-
-            // ── Ultime spese ──────────────────────────────────────────────────
-            if (state.speseDelMese.isNotEmpty()) {
-                item {
-                    Text(
-                        text     = "Ultime spese",
-                        style    = MaterialTheme.typography.titleSmall,
-                        color    = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                    )
-                }
-                items(state.speseDelMese.take(5)) { spesa ->
-                    RowSpesa(spesa = spesa, onClick = onApriSpese)
-                }
-                if (state.speseDelMese.size > 5) {
-                    item {
-                        TextButton(
-                            onClick  = onApriSpese,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp),
-                        ) {
-                            Text("Vedi tutte le ${state.speseDelMese.size} spese")
-                        }
-                    }
-                }
-            }
-        }
+        DashboardPageContent(
+            state                = state,
+            modifier             = Modifier.padding(innerPadding),
+            onApriAnalisi        = onApriAnalisi,
+            onApriAnalisiEntrate = onApriAnalisiEntrate,
+            onMesePrecedente     = onMesePrecedente,
+            onMeseSuccessivo     = onMeseSuccessivo,
+        )
     }
 }
 
-// ── Selettore mese ─────────────────────────────────────────────────────────────
+// ── Selettore periodo ─────────────────────────────────────────────────────────
 
 @Composable
 private fun SelectoreMese(
-    mese: Int,
-    anno: Int,
+    etichetta: String,
     onMesePrecedente: () -> Unit,
     onMeseSuccessivo: () -> Unit,
 ) {
-    val etichetta = remember(mese, anno) {
-        val formatter = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ITALIAN)
-        LocalDate.of(anno, mese, 1).format(formatter).replaceFirstChar { it.uppercase() }
-    }
     Row(
-        modifier              = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 4.dp),
+        modifier              = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
         verticalAlignment     = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         IconButton(onClick = onMesePrecedente) {
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Mese precedente")
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Periodo precedente")
         }
-        Text(
-            text       = etichetta,
-            style      = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-        )
+        Text(etichetta, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         IconButton(onClick = onMeseSuccessivo) {
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Mese successivo")
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Periodo successivo")
+        }
+    }
+}
+
+// ── Card saldo riga ───────────────────────────────────────────────────────────
+
+@Composable
+private fun CardSaldoRiga(
+    label: String,
+    valore: Double,
+    coloreVerde: Color,
+    icona: ImageVector = if (valore >= 0) Icons.Default.TrendingUp else Icons.Default.TrendingDown,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors   = CardDefaults.cardColors(
+            containerColor = if (valore >= 0)
+                coloreVerde.copy(alpha = 0.1f)
+            else
+                MaterialTheme.colorScheme.errorContainer,
+        ),
+    ) {
+        Row(
+            modifier              = Modifier.fillMaxWidth().padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment     = Alignment.CenterVertically,
+        ) {
+            Row(
+                verticalAlignment     = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Icon(
+                    imageVector        = icona,
+                    contentDescription = null,
+                    tint               = if (valore >= 0) coloreVerde else MaterialTheme.colorScheme.error,
+                    modifier           = Modifier.size(20.dp),
+                )
+                Text(label, style = MaterialTheme.typography.bodyMedium)
+            }
+            Text(
+                text       = formatEuro(valore),
+                style      = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color      = if (valore >= 0) coloreVerde else MaterialTheme.colorScheme.error,
+            )
         }
     }
 }
@@ -397,80 +410,18 @@ private fun CardRiepilogo(
         modifier = modifier,
         onClick  = onClick ?: {},
         enabled  = onClick != null,
-        colors   = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        ),
+        colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
     ) {
         Row(
             modifier              = Modifier.padding(12.dp),
             verticalAlignment     = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Icon(
-                imageVector        = icona,
-                contentDescription = null,
-                tint               = coloreIcona,
-                modifier           = Modifier.size(20.dp),
-            )
+            Icon(icona, contentDescription = null, tint = coloreIcona, modifier = Modifier.size(20.dp))
             Column {
-                Text(
-                    text       = valore,
-                    style      = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    text  = label,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Text(valore, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-        }
-    }
-}
-
-// ── Card navigazione ───────────────────────────────────────────────────────────
-
-@Composable
-private fun CardNavigazione(
-    etichetta: String,
-    icona: ImageVector,
-    colore: Color,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Card(
-        onClick  = onClick,
-        modifier = modifier,
-        colors   = CardDefaults.cardColors(containerColor = colore.copy(alpha = 0.12f)),
-        shape    = RoundedCornerShape(12.dp),
-    ) {
-        Column(
-            modifier              = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            horizontalAlignment   = Alignment.CenterHorizontally,
-            verticalArrangement   = Arrangement.spacedBy(8.dp),
-        ) {
-            Box(
-                modifier         = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(colore.copy(alpha = 0.2f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector        = icona,
-                    contentDescription = null,
-                    tint               = colore,
-                    modifier           = Modifier.size(22.dp),
-                )
-            }
-            Text(
-                text       = etichetta,
-                style      = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Medium,
-                color      = colore,
-            )
         }
     }
 }
@@ -478,26 +429,15 @@ private fun CardNavigazione(
 // ── Riga spesa ─────────────────────────────────────────────────────────────────
 
 @Composable
-private fun RowSpesa(
-    spesa: Spesa,
-    onClick: () -> Unit,
-) {
+private fun RowSpesa(spesa: Spesa, onClick: () -> Unit) {
     val dataFormattata = remember(spesa.data) {
         spesa.data?.toDate()?.let { date ->
-            val ld = Instant.ofEpochMilli(date.time)
-                .atZone(ZoneId.systemDefault())
-                .toLocalDate()
+            val ld = Instant.ofEpochMilli(date.time).atZone(ZoneId.systemDefault()).toLocalDate()
             DateTimeFormatter.ofPattern("d MMM", Locale.ITALIAN).format(ld)
         } ?: ""
     }
     ListItem(
-        headlineContent = {
-            Text(
-                text     = spesa.descrizione.ifBlank { "Spesa" },
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        },
+        headlineContent   = { Text(spesa.descrizione.ifBlank { "Spesa" }, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         supportingContent = { if (dataFormattata.isNotEmpty()) Text(dataFormattata) },
         trailingContent   = {
             Text(
@@ -507,14 +447,8 @@ private fun RowSpesa(
                 color      = MaterialTheme.colorScheme.primary,
             )
         },
-        leadingContent    = {
-            Icon(
-                imageVector        = Icons.Default.Receipt,
-                contentDescription = null,
-                tint               = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        },
-        modifier = Modifier,
+        leadingContent    = { Icon(Icons.Default.Receipt, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+        modifier          = Modifier,
     )
     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
 }

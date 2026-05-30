@@ -11,18 +11,15 @@ import com.app.notespese.ui.analisi.AnalisiEntrateScreen
 import com.app.notespese.ui.analisi.AnalisiMeseScreen
 import com.app.notespese.ui.grafici.GraficiScreen
 import com.app.notespese.ui.categorie.CategorieScreen
-import com.app.notespese.ui.dashboard.DashboardScreen
 import com.app.notespese.ui.entrate.AggiungiEntrataScreen
-import com.app.notespese.ui.entrate.EntrataScreen
 import com.app.notespese.ui.gruppi.CreaGruppoScreen
 import com.app.notespese.ui.gruppi.ListaGruppiScreen
 import com.app.notespese.ui.profilo.ProfiloScreen
 import com.app.notespese.ui.gruppi.impostazioni.ImpostazioniGruppoScreen
+import com.app.notespese.ui.home.GruppoHomeScreen
 import com.app.notespese.ui.ricorrenze.AggiungiRicorrenzaScreen
 import com.app.notespese.ui.ricorrenze.RicorrenzeScreen
-import com.app.notespese.ui.saldi.SaldoScreen
 import com.app.notespese.ui.spese.AggiungiSpesaScreen
-import com.app.notespese.ui.spese.SpesaScreen
 
 @Composable
 fun AppNavigation(
@@ -39,11 +36,11 @@ fun AppNavigation(
         // ── Lista gruppi ───────────────────────────────────────────────────────
         composable(Screen.ListaGruppi.route) {
             ListaGruppiScreen(
-                utente       = utente,
-                onCreaGruppo = { navController.navigate(Screen.CreaGruppo.route) },
-                onApriGruppo = { gruppoId -> navController.navigate(Screen.Dashboard.withId(gruppoId)) },
+                utente        = utente,
+                onCreaGruppo  = { navController.navigate(Screen.CreaGruppo.route) },
+                onApriGruppo  = { gruppoId -> navController.navigate(Screen.GruppoHome.withId(gruppoId)) },
                 onApriProfilo = { navController.navigate(Screen.Profilo.route) },
-                onSignOut    = onSignOut
+                onSignOut     = onSignOut
             )
         }
 
@@ -57,47 +54,30 @@ fun AppNavigation(
             CreaGruppoScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onGruppoCreato = { gruppoId ->
-                    navController.navigate(Screen.Dashboard.withId(gruppoId)) {
+                    navController.navigate(Screen.GruppoHome.withId(gruppoId)) {
                         popUpTo(Screen.ListaGruppi.route)
                     }
                 }
             )
         }
 
-        // ── Dashboard gruppo ───────────────────────────────────────────────────
+        // ── Gruppo home (bottom nav: Dashboard | Spese | Entrate | Saldi) ──────
         composable(
-            route     = Screen.Dashboard.route,
+            route     = Screen.GruppoHome.route,
             arguments = listOf(navArgument("gruppoId") { type = NavType.StringType })
         ) { backStackEntry ->
             val gruppoId = backStackEntry.arguments?.getString("gruppoId") ?: return@composable
-            DashboardScreen(
-                gruppoId             = gruppoId,
-                onNavigateBack       = { navController.popBackStack() },
-                onApriSpese          = { id -> navController.navigate(Screen.Spese.withId(id)) },
-                onApriEntrate        = { id -> navController.navigate(Screen.Entrate.withId(id)) },
-                onApriSaldi          = { id -> navController.navigate(Screen.Saldi.withId(id)) },
-                onApriImpostazioni   = { id -> navController.navigate(Screen.ImpostazioniGruppo.withId(id)) },
-                onApriGrafici        = { id -> navController.navigate(Screen.Statistiche.withId(id)) },
-                onApriAnalisi        = { gId, mese, anno ->
-                    navController.navigate(Screen.AnalisiMese.withParams(gId, mese, anno))
-                },
-                onApriAnalisiEntrate = { gId, mese, anno ->
-                    navController.navigate(Screen.AnalisiEntrateMese.withParams(gId, mese, anno))
-                },
-            )
-        }
-
-        // ── Spese ──────────────────────────────────────────────────────────────
-        composable(
-            route     = Screen.Spese.route,
-            arguments = listOf(navArgument("gruppoId") { type = NavType.StringType })
-        ) {
-            SpesaScreen(
-                onNavigateBack  = { navController.popBackStack() },
-                onAggiungiSpesa = { id -> navController.navigate(Screen.AggiungiSpesa.withId(id)) },
-                onModificaSpesa = { gruppoId, spesaId ->
-                    navController.navigate(Screen.ModificaSpesa.withIds(gruppoId, spesaId))
-                },
+            GruppoHomeScreen(
+                gruppoId              = gruppoId,
+                onNavigateBack        = { navController.popBackStack() },
+                onApriImpostazioni    = { id -> navController.navigate(Screen.ImpostazioniGruppo.withId(id)) },
+                onApriStatistiche     = { id -> navController.navigate(Screen.Statistiche.withId(id)) },
+                onApriAggiungiSpesa   = { id -> navController.navigate(Screen.AggiungiSpesa.withId(id)) },
+                onApriModificaSpesa   = { gId, sId -> navController.navigate(Screen.ModificaSpesa.withIds(gId, sId)) },
+                onApriAggiungiEntrata = { id -> navController.navigate(Screen.AggiungiEntrata.withId(id)) },
+                onApriModificaEntrata = { gId, eId -> navController.navigate(Screen.ModificaEntrata.withIds(gId, eId)) },
+                onApriAnalisi         = { gId, m, a -> navController.navigate(Screen.AnalisiMese.withParams(gId, m, a)) },
+                onApriAnalisiEntrate  = { gId, m, a -> navController.navigate(Screen.AnalisiEntrateMese.withParams(gId, m, a)) },
             )
         }
 
@@ -120,20 +100,6 @@ fun AppNavigation(
             AggiungiSpesaScreen(onNavigateBack = { navController.popBackStack() })
         }
 
-        // ── Entrate ────────────────────────────────────────────────────────────
-        composable(
-            route     = Screen.Entrate.route,
-            arguments = listOf(navArgument("gruppoId") { type = NavType.StringType })
-        ) {
-            EntrataScreen(
-                onNavigateBack    = { navController.popBackStack() },
-                onAggiungiEntrata = { id -> navController.navigate(Screen.AggiungiEntrata.withId(id)) },
-                onModificaEntrata = { gruppoId, entrataId ->
-                    navController.navigate(Screen.ModificaEntrata.withIds(gruppoId, entrataId))
-                },
-            )
-        }
-
         // ── Aggiungi entrata ───────────────────────────────────────────────────
         composable(
             route     = Screen.AggiungiEntrata.route,
@@ -151,14 +117,6 @@ fun AppNavigation(
             )
         ) {
             AggiungiEntrataScreen(onNavigateBack = { navController.popBackStack() })
-        }
-
-        // ── Saldi ──────────────────────────────────────────────────────────────
-        composable(
-            route     = Screen.Saldi.route,
-            arguments = listOf(navArgument("gruppoId") { type = NavType.StringType })
-        ) {
-            SaldoScreen(onNavigateBack = { navController.popBackStack() })
         }
 
         // ── Analisi spese mese ─────────────────────────────────────────────────

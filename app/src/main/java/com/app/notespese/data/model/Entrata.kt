@@ -1,5 +1,6 @@
 package com.app.notespese.data.model
 
+import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
 
 /** Documento: gruppi/{gruppoId}/entrate/{entrataId} */
@@ -11,4 +12,5 @@ data class Entrata(
     val mese: Int = 0,
     val anno: Int = 0,
     val note: String = "",
+    val data: Timestamp? = null,
 )

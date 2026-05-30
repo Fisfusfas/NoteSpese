@@ -1,6 +1,7 @@
 package com.app.notespese.data.repository
 
 import com.app.notespese.data.model.Spesa
+import com.google.firebase.Timestamp
 import kotlinx.coroutines.flow.Flow
 
 interface SpesaRepository {
@@ -8,6 +9,8 @@ interface SpesaRepository {
     fun osservaSpese(gruppoId: String): Flow<List<Spesa>>
 
     fun osservaSpesePerMese(gruppoId: String, mese: Int, anno: Int): Flow<List<Spesa>>
+
+    fun osservaSpesePerPeriodo(gruppoId: String, start: Timestamp, end: Timestamp): Flow<List<Spesa>>
 
     /** Ritorna l'id della spesa creata. */
     suspend fun aggiungiSpesa(gruppoId: String, spesa: Spesa): Result<String>

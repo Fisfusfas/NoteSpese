@@ -6,6 +6,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.app.notespese.data.model.Gruppo
 import com.app.notespese.data.model.Membro
 import com.app.notespese.data.repository.AuthRepository
 import com.app.notespese.data.repository.GruppoRepository
@@ -38,9 +39,12 @@ class ImpostazioniGruppoViewModel @Inject constructor(
             val membri: List<Membro>,
             val userId: String,
             val widgetSelezionato: Boolean,
+            val giornoInizioMese: Int,
         ) : UiState
         data class Errore(val messaggio: String) : UiState
     }
+
+    private var _gruppoCorrente: Gruppo? = null
 
     var invitoCodice      by mutableStateOf<String?>(null)
     var erroreInvito      by mutableStateOf<String?>(null)
@@ -55,16 +59,25 @@ class ImpostazioniGruppoViewModel @Inject constructor(
         authRepository.utenteCorrente,
         widgetPrefs.widgetGruppoId,
     ) { gruppo, membri, utente, widgetGruppoId ->
+        _gruppoCorrente = gruppo
         if (gruppo == null) UiState.Errore("Gruppo non trovato")
         else UiState.Successo(
             nomeGruppo        = gruppo.nome,
             membri            = membri,
             userId            = utente?.id ?: "",
             widgetSelezionato = widgetGruppoId == gruppoId,
+            giornoInizioMese  = gruppo.giornoInizioMese,
         )
     }
     .catch { e -> emit(UiState.Errore(e.message ?: "Errore")) }
     .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), UiState.Caricamento)
+
+    fun salvaGiornoInizioMese(giorno: Int) {
+        val gruppo = _gruppoCorrente ?: return
+        viewModelScope.launch {
+            gruppoRepository.aggiornaGruppo(gruppo.copy(giornoInizioMese = giorno.coerceIn(1, 28)))
+        }
+    }
 
     fun generaInvito() {
         val state = uiState.value as? UiState.Successo ?: return

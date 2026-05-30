@@ -130,10 +130,6 @@ private fun SaldoContent(
     onMesePrecedente: () -> Unit,
     onMeseSuccessivo: () -> Unit,
 ) {
-    val saldiAttivi  = state.saldi.filter { !it.isSaldato }
-    val saldiChiusi  = state.saldi.filter {  it.isSaldato }
-    val caricamento  = azioneEsito is SaldoViewModel.AzioneEsito.Caricamento
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -146,8 +142,38 @@ private fun SaldoContent(
             )
         },
     ) { innerPadding ->
+        SaldoLazyContent(
+            state               = state,
+            azioneEsito         = azioneEsito,
+            modifier            = Modifier.padding(innerPadding),
+            onCalcola           = onCalcola,
+            onApriSplitDialog   = onApriSplitDialog,
+            onSegnaComePagato   = onSegnaComePagato,
+            onConfermaPagamento = onConfermaPagamento,
+            onMesePrecedente    = onMesePrecedente,
+            onMeseSuccessivo    = onMeseSuccessivo,
+        )
+    }
+}
+
+@Composable
+private fun SaldoLazyContent(
+    state: SaldoViewModel.UiState.Successo,
+    azioneEsito: SaldoViewModel.AzioneEsito,
+    modifier: Modifier = Modifier,
+    onCalcola: () -> Unit,
+    onApriSplitDialog: () -> Unit,
+    onSegnaComePagato: (String) -> Unit,
+    onConfermaPagamento: (String) -> Unit,
+    onMesePrecedente: () -> Unit,
+    onMeseSuccessivo: () -> Unit,
+) {
+    val saldiAttivi  = state.saldi.filter { !it.isSaldato }
+    val saldiChiusi  = state.saldi.filter {  it.isSaldato }
+    val caricamento  = azioneEsito is SaldoViewModel.AzioneEsito.Caricamento
+
         LazyColumn(
-            modifier       = Modifier.fillMaxSize().padding(innerPadding),
+            modifier       = modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = 24.dp),
         ) {
 
@@ -279,7 +305,6 @@ private fun SaldoContent(
                 }
             }
         }
-    }
 }
 
 // ── Dialog configurazione suddivisione ────────────────────────────────────────
@@ -456,4 +481,54 @@ private fun CardSaldo(
 private fun nomeMembro(userId: String, membri: List<Membro>): String {
     val membro = membri.find { it.userId == userId }
     return membro?.nominativoLocale?.ifBlank { null } ?: userId.take(8)
+}
+
+// ── Tab content (no Scaffold, for use inside GruppoHomeScreen) ────────────────
+
+@Composable
+fun SaldoTabContent(
+    modifier: Modifier = Modifier,
+    viewModel: SaldoViewModel = hiltViewModel(),
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    if (viewModel.showSplitDialog) {
+        val state = uiState as? SaldoViewModel.UiState.Successo
+        if (state != null) {
+            SplitConfigDialog(
+                modalita         = viewModel.splitModalita,
+                onModalitaChange = { viewModel.splitModalita = it },
+                pesi             = viewModel.splitPesi,
+                onPesoChange     = { uid, v -> viewModel.splitPesi = viewModel.splitPesi + (uid to v) },
+                membri           = state.membri,
+                onDismiss        = viewModel::chiudiDialogSplit,
+                onConferma       = viewModel::salvaSplit,
+            )
+        }
+    }
+
+    when (val state = uiState) {
+        is SaldoViewModel.UiState.Caricamento -> {
+            Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+        }
+        is SaldoViewModel.UiState.Errore -> {
+            Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(state.messaggio, color = MaterialTheme.colorScheme.error)
+            }
+        }
+        is SaldoViewModel.UiState.Successo -> {
+            LaunchedEffect(state.mese, state.anno) { viewModel.calcolaESalva() }
+            SaldoLazyContent(
+                state               = state,
+                azioneEsito         = viewModel.azioneEsito,
+                modifier            = modifier,
+                onCalcola           = viewModel::calcolaESalva,
+                onApriSplitDialog   = viewModel::apriFialogSplit,
+                onSegnaComePagato   = viewModel::segnaComePagato,
+                onConfermaPagamento = viewModel::confermaPagamento,
+                onMesePrecedente    = viewModel::mesePrecedente,
+                onMeseSuccessivo    = viewModel::meseSuccessivo,
+            )
+        }
+    }
 }

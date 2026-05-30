@@ -22,7 +22,10 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import java.time.YearMonth
+import java.time.ZoneId
+import java.util.Date
 import javax.inject.Inject
 
 @HiltViewModel
@@ -103,6 +106,9 @@ class AggiungiEntrataViewModel @Inject constructor(
             return
         }
         erroreImporto = false
+        val dataTs = com.google.firebase.Timestamp(
+            Date.from(LocalDate.of(anno, mese, 1).atStartOfDay(ZoneId.systemDefault()).toInstant())
+        )
         val entrata = Entrata(
             id          = entrataId ?: "",
             importo     = importoDouble,
@@ -111,6 +117,7 @@ class AggiungiEntrataViewModel @Inject constructor(
             mese        = mese,
             anno        = anno,
             note        = note.trim(),
+            data        = dataTs,
         )
         viewModelScope.launch {
             esito = Esito.Caricamento
@@ -126,9 +133,9 @@ class AggiungiEntrataViewModel @Inject constructor(
         }
     }
 
-    fun creaCategoria(nome: String, colore: String) {
+    fun creaCategoria(nome: String, colore: String, icona: String = "label") {
         viewModelScope.launch {
-            val cat = Categoria(nome = nome.trim(), icona = "label", colore = colore, tipo = TipoCategoria.ENTRATA.name)
+            val cat = Categoria(nome = nome.trim(), icona = icona, colore = colore, tipo = TipoCategoria.ENTRATA.name)
             categoriaRepository.aggiungiCategoria(gruppoId, cat).onSuccess { id ->
                 categoriaId = id
             }

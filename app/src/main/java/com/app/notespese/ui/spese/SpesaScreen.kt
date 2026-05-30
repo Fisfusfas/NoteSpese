@@ -141,12 +141,7 @@ private fun SpesaContent(
                     IconButton(onClick = onMesePrecedente) {
                         Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Mese precedente")
                     }
-                    val etichetta = remember(state.mese, state.anno) {
-                        val fmt = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ITALIAN)
-                        java.time.LocalDate.of(state.anno, state.mese, 1)
-                            .format(fmt).replaceFirstChar { it.uppercase() }
-                    }
-                    Text(etichetta, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text(state.periodoLabel, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     IconButton(onClick = onMeseSuccessivo) {
                         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Mese successivo")
                     }
@@ -338,4 +333,83 @@ private fun RigaSpesa(spesa: Spesa, categoria: Categoria?, onClick: () -> Unit) 
         },
     )
     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+}
+
+// ── Tab content (no Scaffold, for use inside GruppoHomeScreen) ────────────────
+
+@Composable
+fun SpesaListContent(
+    onModificaSpesa: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: SpesaViewModel = hiltViewModel(),
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    when (val state = uiState) {
+        is SpesaViewModel.UiState.Caricamento -> {
+            Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+        }
+        is SpesaViewModel.UiState.Errore -> {
+            Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(state.messaggio, color = MaterialTheme.colorScheme.error)
+            }
+        }
+        is SpesaViewModel.UiState.Successo -> {
+            LazyColumn(
+                modifier       = modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = 88.dp),
+            ) {
+                item {
+                    Row(
+                        modifier              = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment     = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        IconButton(onClick = viewModel::mesePrecedente) {
+                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Periodo precedente")
+                        }
+                        Text(state.periodoLabel, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        IconButton(onClick = viewModel::meseSuccessivo) {
+                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Periodo successivo")
+                        }
+                    }
+                }
+                if (state.spese.isNotEmpty()) {
+                    item {
+                        val totale = state.spese.sumOf { it.importo }
+                        Text(
+                            text     = "Totale: ${NumberFormat.getCurrencyInstance(Locale.ITALY).format(totale)}  ·  ${state.spese.size} operazioni",
+                            style    = MaterialTheme.typography.bodySmall,
+                            color    = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                        )
+                        HorizontalDivider()
+                    }
+                }
+                if (state.spese.isEmpty()) {
+                    item {
+                        Text(
+                            text      = "Nessuna spesa questo periodo.\nPremi + per aggiungerne una.",
+                            style     = MaterialTheme.typography.bodyMedium,
+                            color     = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier  = Modifier.fillMaxWidth().padding(32.dp),
+                        )
+                    }
+                } else {
+                    items(state.spese, key = { it.id }) { spesa ->
+                        val categoria = remember(spesa.categoriaId, state.categorie) {
+                            state.categorie.find { it.id == spesa.categoriaId }
+                        }
+                        SpesaSwipeItem(
+                            spesa      = spesa,
+                            categoria  = categoria,
+                            onDelete   = { viewModel.eliminaSpesa(spesa.id) },
+                            onModifica = { onModificaSpesa(spesa.id) },
+                        )
+                    }
+                }
+            }
+        }
+    }
 }

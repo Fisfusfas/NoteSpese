@@ -9,6 +9,7 @@ import com.app.notespese.data.model.Membro
 import com.app.notespese.data.repository.CategoriaRepository
 import com.app.notespese.data.repository.EntrataRepository
 import com.app.notespese.data.repository.GruppoRepository
+import com.app.notespese.util.etichettaPeriodo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -25,7 +26,7 @@ import javax.inject.Inject
 class EntrataViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val entrataRepository: EntrataRepository,
-    gruppoRepository: GruppoRepository,
+    private val gruppoRepository: GruppoRepository,
     categoriaRepository: CategoriaRepository,
 ) : ViewModel() {
 
@@ -38,6 +39,7 @@ class EntrataViewModel @Inject constructor(
             val entrate: List<Entrata>,
             val categorie: List<Categoria>,
             val membri: List<Membro>,
+            val periodoLabel: String,
             val mese: Int,
             val anno: Int,
         ) : UiState
@@ -57,12 +59,13 @@ class EntrataViewModel @Inject constructor(
             ) { gruppo, entrate, categorie, membri ->
                 if (gruppo == null) UiState.Errore("Gruppo non trovato")
                 else UiState.Successo(
-                    nomeGruppo = gruppo.nome,
-                    entrate    = entrate,
-                    categorie  = categorie,
-                    membri     = membri,
-                    mese       = mese,
-                    anno       = anno,
+                    nomeGruppo   = gruppo.nome,
+                    entrate      = entrate,
+                    categorie    = categorie,
+                    membri       = membri,
+                    periodoLabel = etichettaPeriodo(gruppo.giornoInizioMese, mese, anno),
+                    mese         = mese,
+                    anno         = anno,
                 )
             }
         }
