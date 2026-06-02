@@ -61,3 +61,6 @@ val OnSurfaceDark             = Color(0xFFE2E2E6)
 val SurfaceVariantDark        = Color(0xFF44474F)
 val OnSurfaceVariantDark      = Color(0xFFC4C6D0)
 val OutlineDark               = Color(0xFF8E9099)
+
+// ── Semantici ──────────────────────────────────────────────────────────────
+val SuccessGreen = Color(0xFF2E7D32)

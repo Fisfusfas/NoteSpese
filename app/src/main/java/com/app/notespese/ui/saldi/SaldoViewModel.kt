@@ -65,6 +65,12 @@ class SaldoViewModel @Inject constructor(
     var splitModalita   by mutableStateOf(ModalitaSplit.CINQUANTA)
     var splitPesi       by mutableStateOf<Map<String, String>>(emptyMap())
 
+    // ── Dialog rettifica manuale ───────────────────────────────────────────────
+    var showRettificaDialog  by mutableStateOf(false)
+    var rettificaImporto     by mutableStateOf("")
+    var rettificaNota        by mutableStateOf("")
+    private var rettificaSaldoId = ""
+
     val uiState: StateFlow<UiState> = _meseAnno
         .flatMapLatest { (mese, anno) ->
             val meseId = "%04d-%02d".format(anno, mese)
@@ -127,7 +133,7 @@ class SaldoViewModel @Inject constructor(
         }
     }
 
-    fun apriFialogSplit() {
+    fun apriDialogSplit() {
         val state  = uiState.value as? UiState.Successo ?: return
         val config = state.meseConfig
         splitModalita = ModalitaSplit.entries.find { it.name == config?.modalitaSplit }
@@ -167,6 +173,32 @@ class SaldoViewModel @Inject constructor(
             azioneEsito = saldoRepository.segnaComePagato(gruppoId, meseId, saldoId).fold(
                 onSuccess = { AzioneEsito.Inattivo },
                 onFailure = { AzioneEsito.Errore(it.message ?: "Errore") },
+            )
+        }
+    }
+
+    fun apriDialogRettifica(saldoId: String) {
+        val saldo = (uiState.value as? UiState.Successo)?.saldi?.find { it.id == saldoId } ?: return
+        rettificaSaldoId = saldoId
+        rettificaImporto = if (saldo.importoExtra == 0.0) ""
+                           else saldo.importoExtra.toBigDecimal().stripTrailingZeros().toPlainString()
+        rettificaNota = saldo.noteExtra
+        showRettificaDialog = true
+    }
+
+    fun chiudiDialogRettifica() { showRettificaDialog = false }
+
+    fun salvaRettifica() {
+        val state  = uiState.value as? UiState.Successo ?: return
+        val meseId = "%04d-%02d".format(state.anno, state.mese)
+        val extra  = rettificaImporto.replace(",", ".").toDoubleOrNull() ?: 0.0
+        val nota   = rettificaNota.trim()
+        showRettificaDialog = false
+        viewModelScope.launch {
+            azioneEsito = AzioneEsito.Caricamento
+            azioneEsito = saldoRepository.aggiornaRettifica(gruppoId, meseId, rettificaSaldoId, extra, nota).fold(
+                onSuccess = { AzioneEsito.Inattivo },
+                onFailure = { AzioneEsito.Errore(it.message ?: "Errore nel salvataggio") },
             )
         }
     }

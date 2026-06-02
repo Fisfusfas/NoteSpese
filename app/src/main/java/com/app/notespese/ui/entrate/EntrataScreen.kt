@@ -4,19 +4,16 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.TrendingUp
@@ -34,14 +31,16 @@ import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberSwipeToDismissBoxState
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -49,9 +48,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.app.notespese.data.model.Categoria
 import com.app.notespese.data.model.Entrata
 import com.app.notespese.data.model.Membro
+import com.app.notespese.ui.common.SelectoreMese
+import com.app.notespese.ui.common.StatoVuoto
+import com.app.notespese.ui.theme.SuccessGreen
 import java.text.NumberFormat
+import java.time.Instant
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 
 @Composable
 fun EntrataScreen(
@@ -119,25 +124,13 @@ private fun EntrataContent(
             modifier       = Modifier.fillMaxSize().padding(innerPadding),
             contentPadding = PaddingValues(bottom = 88.dp),
         ) {
-
-            // ── Selettore mese ────────────────────────────────────────────────
             item {
-                Row(
-                    modifier              = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
-                    verticalAlignment     = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    IconButton(onClick = onMesePrecedente) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Mese precedente")
-                    }
-                    Text(state.periodoLabel, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                    IconButton(onClick = onMeseSuccessivo) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Mese successivo")
-                    }
-                }
+                SelectoreMese(
+                    periodoLabel = state.periodoLabel,
+                    onPrecedente = onMesePrecedente,
+                    onSuccessivo = onMeseSuccessivo,
+                )
             }
-
-            // ── Riepilogo ─────────────────────────────────────────────────────
             if (state.entrate.isNotEmpty()) {
                 item {
                     val totale = state.entrate.sumOf { it.importo }
@@ -150,17 +143,9 @@ private fun EntrataContent(
                     HorizontalDivider()
                 }
             }
-
-            // ── Lista entrate ─────────────────────────────────────────────────
             if (state.entrate.isEmpty()) {
                 item {
-                    Text(
-                        text      = "Nessuna entrata questo mese.\nPremi + per aggiungerne una.",
-                        style     = MaterialTheme.typography.bodyMedium,
-                        color     = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                        modifier  = Modifier.fillMaxWidth().padding(32.dp),
-                    )
+                    StatoVuoto("Nessuna entrata questo mese.\nPremi + per aggiungerne una.")
                 }
             } else {
                 items(state.entrate, key = { it.id }) { entrata ->
@@ -192,9 +177,29 @@ private fun EntrataSwipeItem(
     onDelete: () -> Unit,
     onModifica: () -> Unit,
 ) {
+    var showConfirmDialog by remember { mutableStateOf(false) }
+
+    if (showConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showConfirmDialog = false },
+            title   = { Text("Elimina entrata") },
+            text    = { Text("Sei sicuro di voler eliminare questa entrata? L'operazione non è reversibile.") },
+            confirmButton = {
+                TextButton(onClick = { showConfirmDialog = false; onDelete() }) {
+                    Text("Elimina", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showConfirmDialog = false }) { Text("Annulla") }
+            },
+        )
+    }
+
     val dismissState = rememberSwipeToDismissBoxState(
+        // Ritorna false: lo swipe torna indietro e mostra il dialog di conferma
         confirmValueChange = { value ->
-            if (value == SwipeToDismissBoxValue.EndToStart) { onDelete(); true } else false
+            if (value == SwipeToDismissBoxValue.EndToStart) { showConfirmDialog = true }
+            false
         },
         positionalThreshold = { it * 0.4f },
     )
@@ -230,23 +235,54 @@ private fun RigaEntrata(
         ?: membro?.userId?.take(10)
         ?: entrata.persona.take(10)
 
+    val dataFormattata = remember(entrata.data) {
+        entrata.data?.toDate()?.let { date ->
+            val ld = Instant.ofEpochMilli(date.time).atZone(ZoneId.systemDefault()).toLocalDate()
+            DateTimeFormatter.ofPattern("d MMM", Locale.ITALIAN).format(ld)
+        } ?: ""
+    }
+
     ListItem(
         modifier          = Modifier.clickable(onClick = onClick),
         headlineContent   = {
-            Text(
-                text     = categoria?.nome ?: "Entrata",
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Text(categoria?.nome ?: "Entrata", maxLines = 1, overflow = TextOverflow.Ellipsis)
         },
         supportingContent = {
-            Text(nomeMembro, style = MaterialTheme.typography.bodySmall)
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment     = Alignment.CenterVertically,
+                ) {
+                    if (dataFormattata.isNotEmpty()) {
+                        Text(
+                            text  = dataFormattata,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text  = "·",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Text(nomeMembro, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+                }
+                if (entrata.note.isNotBlank()) {
+                    Text(
+                        text     = entrata.note,
+                        style    = MaterialTheme.typography.bodySmall,
+                        color    = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
         },
         leadingContent    = {
             Icon(
                 imageVector        = Icons.Default.TrendingUp,
                 contentDescription = null,
-                tint               = Color(0xFF2E7D32),
+                tint               = SuccessGreen,
             )
         },
         trailingContent   = {
@@ -254,7 +290,7 @@ private fun RigaEntrata(
                 text       = NumberFormat.getCurrencyInstance(Locale.ITALY).format(entrata.importo),
                 style      = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
-                color      = Color(0xFF2E7D32),
+                color      = SuccessGreen,
             )
         },
     )
@@ -287,24 +323,12 @@ fun EntrataListContent(
                 contentPadding = PaddingValues(bottom = 88.dp),
             ) {
                 item {
-                    Row(
-                        modifier              = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
-                        verticalAlignment     = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        IconButton(onClick = viewModel::mesePrecedente) {
-                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Periodo precedente")
-                        }
-                        Text(
-                            text       = state.periodoLabel,
-                            style      = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier   = Modifier.clickable { viewModel.tornaAdOggi() },
-                        )
-                        IconButton(onClick = viewModel::meseSuccessivo) {
-                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Periodo successivo")
-                        }
-                    }
+                    SelectoreMese(
+                        periodoLabel  = state.periodoLabel,
+                        onPrecedente  = viewModel::mesePrecedente,
+                        onSuccessivo  = viewModel::meseSuccessivo,
+                        onTornaAdOggi = viewModel::tornaAdOggi,
+                    )
                 }
                 if (state.entrate.isNotEmpty()) {
                     item {
@@ -320,13 +344,7 @@ fun EntrataListContent(
                 }
                 if (state.entrate.isEmpty()) {
                     item {
-                        Text(
-                            text      = "Nessuna entrata questo periodo.\nPremi + per aggiungerne una.",
-                            style     = MaterialTheme.typography.bodyMedium,
-                            color     = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
-                            modifier  = Modifier.fillMaxWidth().padding(32.dp),
-                        )
+                        StatoVuoto("Nessuna entrata questo periodo.\nPremi + per aggiungerne una.")
                     }
                 } else {
                     items(state.entrate, key = { it.id }) { entrata ->

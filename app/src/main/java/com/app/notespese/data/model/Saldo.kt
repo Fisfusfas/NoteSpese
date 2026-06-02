@@ -16,12 +16,19 @@ data class Saldo(
     val da: String = "",
     val a: String = "",
     val importoCalcolato: Double = 0.0,
+    /** Aggiustamento manuale: positivo = debito extra, negativo = riduzione. */
+    val importoExtra: Double = 0.0,
+    /** Nota descrittiva associata alla rettifica manuale. */
+    val noteExtra: String = "",
     val statoDebitore: String = StatoDebitore.IN_ATTESA.name,
     val statoCreditore: String = StatoCreditore.IN_ATTESA.name,
     val dataPagamento: Timestamp? = null,
     val dataConferma: Timestamp? = null,
     val note: String = "",
 ) {
+    /** Importo totale effettivo da saldare. */
+    val importoTotale: Double get() = importoCalcolato + importoExtra
+
     val isSaldato: Boolean
         get() = statoDebitore == StatoDebitore.PAGATO.name &&
                 statoCreditore == StatoCreditore.CONFERMATO.name

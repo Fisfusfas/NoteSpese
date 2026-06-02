@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import kotlin.math.abs
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -33,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import com.app.notespese.ui.theme.SuccessGreen
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -81,8 +83,10 @@ fun GraficiScreen(
                     contentPadding      = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    item { CardEntratePerUtente(state) }
+                    item { CardSpesePerCategoria(state) }
                     item { CardTrendMensile(state.mesiBar) }
+                    item { CardSaldoMensile(state.mesiBar) }
+                    item { CardEntratePerUtente(state) }
                 }
         }
     }
@@ -185,7 +189,7 @@ private fun CardEntratePerUtente(state: GraficiViewModel.UiState.Successo) {
 @Composable
 private fun CardTrendMensile(mesi: List<GraficiViewModel.MeseBar>) {
     val rosso = MaterialTheme.colorScheme.error
-    val verde = Color(0xFF4CAF50)
+    val verde = SuccessGreen
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -269,5 +273,182 @@ private fun LegendaItem(colore: Color, label: String) {
                 .background(colore, RoundedCornerShape(2.dp))
         )
         Text(label, style = MaterialTheme.typography.labelMedium)
+    }
+}
+
+// ── Spese per categoria (storico) ──────────────────────────────────────────────
+
+@Composable
+private fun CardSpesePerCategoria(state: GraficiViewModel.UiState.Successo) {
+    val fmt = NumberFormat.getCurrencyInstance(Locale.ITALY)
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                "Spese per categoria",
+                style      = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                "Totale storico — tutte le spese",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(12.dp))
+
+            if (state.categorieBar.isEmpty()) {
+                Box(
+                    modifier         = Modifier.fillMaxWidth().height(80.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        "Nessuna spesa registrata",
+                        color     = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style     = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    state.categorieBar.forEach { cat ->
+                        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Row(
+                                modifier              = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment     = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    text       = cat.nome,
+                                    style      = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines   = 1,
+                                    overflow   = TextOverflow.Ellipsis,
+                                    modifier   = Modifier.weight(1f),
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    text       = fmt.format(cat.totale),
+                                    style      = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                )
+                            }
+                            Row(
+                                modifier          = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .weight(cat.percentuale.coerceAtLeast(0.02f))
+                                        .height(10.dp)
+                                        .background(cat.colore, RoundedCornerShape(5.dp))
+                                )
+                                if (cat.percentuale < 1f) {
+                                    Box(
+                                        modifier = Modifier
+                                            .weight((1f - cat.percentuale).coerceAtLeast(0.02f))
+                                            .height(10.dp)
+                                            .background(
+                                                MaterialTheme.colorScheme.surfaceContainerHighest,
+                                                RoundedCornerShape(5.dp),
+                                            )
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ── Saldo mensile ──────────────────────────────────────────────────────────────
+
+@Composable
+private fun CardSaldoMensile(mesi: List<GraficiViewModel.MeseBar>) {
+    val rosso    = MaterialTheme.colorScheme.error
+    val verde    = SuccessGreen
+    val fmt      = NumberFormat.getCurrencyInstance(Locale.ITALY)
+    val altMax   = 100.dp
+    val saldi    = mesi.map { it.entrate - it.spese }
+    val maxAbs   = saldi.maxOfOrNull { abs(it) }?.coerceAtLeast(1.0) ?: 1.0
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                "Saldo mensile",
+                style      = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                "Entrate − Spese, ultimi 6 mesi",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(16.dp))
+
+            Row(
+                modifier              = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+            ) {
+                mesi.forEachIndexed { i, mese ->
+                    val saldo     = saldi[i]
+                    val barH      = (altMax * (abs(saldo) / maxAbs).toFloat()).coerceAtLeast(3.dp)
+                    val colore    = if (saldo >= 0.0) verde else rosso
+                    val labelText = (if (saldo >= 0.0) "+" else "") + fmt.format(saldo)
+
+                    Column(
+                        modifier            = Modifier.weight(1f),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        // Area fissa per il valore, sempre sopra la barra
+                        Box(
+                            modifier         = Modifier.fillMaxWidth().height(24.dp),
+                            contentAlignment = Alignment.BottomCenter,
+                        ) {
+                            Text(
+                                text      = labelText,
+                                style     = MaterialTheme.typography.labelSmall,
+                                color     = colore,
+                                textAlign = TextAlign.Center,
+                                maxLines  = 1,
+                                overflow  = TextOverflow.Ellipsis,
+                            )
+                        }
+                        Spacer(Modifier.height(2.dp))
+                        // Area fissa per la barra: la barra cresce dal basso
+                        Box(
+                            modifier         = Modifier.fillMaxWidth().height(altMax),
+                            contentAlignment = Alignment.BottomCenter,
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .width(14.dp)
+                                    .height(barH)
+                                    .background(colore, RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp))
+                            )
+                        }
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text      = mese.label,
+                            style     = MaterialTheme.typography.labelSmall,
+                            textAlign = TextAlign.Center,
+                            maxLines  = 1,
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                LegendaItem(colore = verde, label = "Surplus")
+                LegendaItem(colore = rosso, label = "Deficit")
+            }
+        }
     }
 }

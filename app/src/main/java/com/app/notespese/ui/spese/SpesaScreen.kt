@@ -1,6 +1,5 @@
 package com.app.notespese.ui.spese
 
-import androidx.compose.ui.tooling.preview.Preview
 import com.app.notespese.ui.theme.NoteSpeseTema
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -20,8 +19,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
@@ -32,6 +29,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -56,14 +54,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.app.notespese.data.model.Categoria
 import com.app.notespese.data.model.Spesa
 import com.app.notespese.data.model.TipoSpesa
+import com.app.notespese.ui.common.SelectoreMese
+import com.app.notespese.ui.common.StatoVuoto
 import com.app.notespese.ui.common.iconaCategoria
 import com.app.notespese.ui.gruppi.parseColore
 import java.text.NumberFormat
@@ -73,6 +73,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 @Composable
+
 fun SpesaScreen(
     onNavigateBack: () -> Unit,
     onAggiungiSpesa: (String) -> Unit,
@@ -141,19 +142,11 @@ private fun SpesaContent(
 
             // ── Selettore mese ────────────────────────────────────────────────
             item {
-                Row(
-                    modifier              = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
-                    verticalAlignment     = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    IconButton(onClick = onMesePrecedente) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Mese precedente")
-                    }
-                    Text(state.periodoLabel, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                    IconButton(onClick = onMeseSuccessivo) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Mese successivo")
-                    }
-                }
+                SelectoreMese(
+                    periodoLabel = state.periodoLabel,
+                    onPrecedente = onMesePrecedente,
+                    onSuccessivo = onMeseSuccessivo,
+                )
             }
 
             // ── Riepilogo ─────────────────────────────────────────────────────
@@ -173,13 +166,7 @@ private fun SpesaContent(
             // ── Lista spese ───────────────────────────────────────────────────
             if (state.spese.isEmpty()) {
                 item {
-                    Text(
-                        text      = "Nessuna spesa questo mese.\nPremi + per aggiungerne una.",
-                        style     = MaterialTheme.typography.bodyMedium,
-                        color     = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                        modifier  = Modifier.fillMaxWidth().padding(32.dp),
-                    )
+                    StatoVuoto("Nessuna spesa questo mese.\nPremi + per aggiungerne una.")
                 }
             } else {
                 items(state.spese, key = { it.id }) { spesa ->
@@ -189,6 +176,7 @@ private fun SpesaContent(
                     SpesaSwipeItem(
                         spesa     = spesa,
                         categoria = categoria,
+                        membri    = state.membri,
                         onDelete  = { onEliminaSpesa(spesa.id) },
                         onModifica = { onModificaSpesa(spesa.id) },
                     )
@@ -203,6 +191,7 @@ private fun SpesaContent(
 private fun SpesaSwipeItem(
     spesa: Spesa,
     categoria: Categoria?,
+    membri: Map<String, String> = emptyMap(),
     onDelete: () -> Unit,
     onModifica: () -> Unit,
 ) {
@@ -250,12 +239,12 @@ private fun SpesaSwipeItem(
             }
         },
     ) {
-        RigaSpesa(spesa = spesa, categoria = categoria, onClick = onModifica)
+        RigaSpesa(spesa = spesa, categoria = categoria, membri = membri, onClick = onModifica)
     }
 }
 
 @Composable
-private fun RigaSpesa(spesa: Spesa, categoria: Categoria?, onClick: () -> Unit) {
+private fun RigaSpesa(spesa: Spesa, categoria: Categoria?, membri: Map<String, String> = emptyMap(), onClick: () -> Unit) {
     val dataFormattata = remember(spesa.data) {
         spesa.data?.toDate()?.let { date ->
             val ld = Instant.ofEpochMilli(date.time).atZone(ZoneId.systemDefault()).toLocalDate()
@@ -268,34 +257,22 @@ private fun RigaSpesa(spesa: Spesa, categoria: Categoria?, onClick: () -> Unit) 
             Text(spesa.descrizione.ifBlank { "Spesa" }, maxLines = 1, overflow = TextOverflow.Ellipsis)
         },
         supportingContent = {
-            Column {
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            val nomePagante = membri[spesa.pagante]?.ifBlank { null } ?: spesa.pagante.take(8).ifBlank { null }
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                // Riga 1: data · pagante
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
                     if (dataFormattata.isNotEmpty()) {
-                        Text(dataFormattata, style = MaterialTheme.typography.bodySmall)
+                        Text(dataFormattata, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    categoria?.let { cat ->
-                        val catColor = parseColore(cat.colore)
-                        SuggestionChip(
-                            onClick  = {},
-                            label    = { Text(cat.nome, style = MaterialTheme.typography.labelSmall) },
-                            colors   = SuggestionChipDefaults.suggestionChipColors(
-                                containerColor = catColor.copy(alpha = 0.15f),
-                                labelColor     = catColor,
-                            ),
-                            modifier = Modifier.height(20.dp),
-                        )
+                    nomePagante?.let { nome ->
+                        if (dataFormattata.isNotEmpty()) {
+                            Text("·", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Text(nome, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
                     }
-                    SuggestionChip(
-                        onClick  = {},
-                        label    = { Text(if (spesa.condivisa) "Condivisa" else "Personale", style = MaterialTheme.typography.labelSmall) },
-                        colors   = SuggestionChipDefaults.suggestionChipColors(
-                            containerColor = if (spesa.condivisa)
-                                MaterialTheme.colorScheme.primaryContainer
-                            else
-                                MaterialTheme.colorScheme.secondaryContainer,
-                        ),
-                        modifier = Modifier.height(20.dp),
-                    )
+                }
+                // Riga 2: chip tipo · condivisa · categoria
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                     SuggestionChip(
                         onClick  = {},
                         label    = { Text(if (spesa.tipo == TipoSpesa.FISSA.name) "Fissa" else "Variabile", style = MaterialTheme.typography.labelSmall) },
@@ -307,6 +284,29 @@ private fun RigaSpesa(spesa: Spesa, categoria: Categoria?, onClick: () -> Unit) 
                         ),
                         modifier = Modifier.height(20.dp),
                     )
+                    SuggestionChip(
+                        onClick  = {},
+                        label    = { Text(if (spesa.condivisa) "Condivisa" else "Personale", style = MaterialTheme.typography.labelSmall) },
+                        colors   = SuggestionChipDefaults.suggestionChipColors(
+                            containerColor = if (spesa.condivisa)
+                                MaterialTheme.colorScheme.primaryContainer
+                            else
+                                MaterialTheme.colorScheme.secondaryContainer,
+                        ),
+                        modifier = Modifier.height(20.dp),
+                    )
+                    categoria?.let { cat ->
+                        val catColor = parseColore(cat.colore)
+                        SuggestionChip(
+                            onClick  = {},
+                            label    = { Text(cat.nome, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                            colors   = SuggestionChipDefaults.suggestionChipColors(
+                                containerColor = catColor.copy(alpha = 0.15f),
+                                labelColor     = catColor,
+                            ),
+                            modifier = Modifier.height(20.dp),
+                        )
+                    }
                 }
                 if (spesa.note.isNotBlank()) {
                     Text(
@@ -354,8 +354,9 @@ fun SpesaListContent(
     viewModel: SpesaViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var query  by rememberSaveable { mutableStateOf("") }
-    var filtro by rememberSaveable { mutableStateOf("Tutte") }
+    var query         by rememberSaveable { mutableStateOf("") }
+    var filtro        by rememberSaveable { mutableStateOf("Tutte") }
+    var filtroPagante by rememberSaveable { mutableStateOf<String?>(null) }
 
     when (val state = uiState) {
         is SpesaViewModel.UiState.Caricamento -> {
@@ -374,7 +375,8 @@ fun SpesaListContent(
                     "Variabili" -> spesa.tipo == TipoSpesa.VARIABILE.name
                     "Personali" -> !spesa.condivisa
                     else        -> true
-                }
+                } &&
+                (filtroPagante == null || spesa.pagante == filtroPagante)
             }
 
             LazyColumn(
@@ -383,24 +385,12 @@ fun SpesaListContent(
             ) {
                 // ── Selettore periodo ─────────────────────────────────────────
                 item {
-                    Row(
-                        modifier              = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
-                        verticalAlignment     = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        IconButton(onClick = viewModel::mesePrecedente) {
-                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Periodo precedente")
-                        }
-                        Text(
-                            text       = state.periodoLabel,
-                            style      = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier   = Modifier.clickable { viewModel.tornaAdOggi() },
-                        )
-                        IconButton(onClick = viewModel::meseSuccessivo) {
-                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Periodo successivo")
-                        }
-                    }
+                    SelectoreMese(
+                        periodoLabel  = state.periodoLabel,
+                        onPrecedente  = viewModel::mesePrecedente,
+                        onSuccessivo  = viewModel::meseSuccessivo,
+                        onTornaAdOggi = viewModel::tornaAdOggi,
+                    )
                 }
 
                 // ── Barra di ricerca ──────────────────────────────────────────
@@ -421,8 +411,9 @@ fun SpesaListContent(
                 // ── Filtri ─────────────────────────────────────────────────────
                 item {
                     LazyRow(
-                        contentPadding      = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+                        contentPadding        = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment     = Alignment.CenterVertically,
                     ) {
                         items(listOf("Tutte", "Fisse", "Variabili", "Personali")) { f ->
                             FilterChip(
@@ -430,6 +421,21 @@ fun SpesaListContent(
                                 onClick  = { filtro = f },
                                 label    = { Text(f) },
                             )
+                        }
+                        if (state.membri.isNotEmpty()) {
+                            item {
+                                VerticalDivider(
+                                    modifier  = Modifier.height(24.dp).padding(horizontal = 2.dp),
+                                    color     = MaterialTheme.colorScheme.outlineVariant,
+                                )
+                            }
+                            items(state.membri.entries.toList(), key = { it.key }) { (userId, nome) ->
+                                FilterChip(
+                                    selected = filtroPagante == userId,
+                                    onClick  = { filtroPagante = if (filtroPagante == userId) null else userId },
+                                    label    = { Text(nome) },
+                                )
+                            }
                         }
                     }
                 }
@@ -448,15 +454,11 @@ fun SpesaListContent(
                 }
                 if (speseFiltrate.isEmpty()) {
                     item {
-                        Text(
-                            text      = if (query.isNotEmpty() || filtro != "Tutte")
+                        StatoVuoto(
+                            if (query.isNotEmpty() || filtro != "Tutte" || filtroPagante != null)
                                 "Nessuna spesa corrisponde ai filtri."
                             else
-                                "Nessuna spesa questo periodo.\nPremi + per aggiungerne una.",
-                            style     = MaterialTheme.typography.bodyMedium,
-                            color     = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
-                            modifier  = Modifier.fillMaxWidth().padding(32.dp),
+                                "Nessuna spesa questo periodo.\nPremi + per aggiungerne una."
                         )
                     }
                 } else {
@@ -467,6 +469,7 @@ fun SpesaListContent(
                         SpesaSwipeItem(
                             spesa      = spesa,
                             categoria  = categoria,
+                            membri     = state.membri,
                             onDelete   = { viewModel.eliminaSpesa(spesa.id) },
                             onModifica = { onModificaSpesa(spesa.id) },
                         )
@@ -483,27 +486,29 @@ private val _pCat1 = Categoria(id = "c1", nome = "Alimentari",  colore = "#4CAF5
 private val _pCat2 = Categoria(id = "c2", nome = "Abbonamenti", colore = "#9C27B0", icona = "subscriptions")
 private val _pCat3 = Categoria(id = "c3", nome = "Salute",      colore = "#F44336", icona = "local_hospital")
 
-private val _pS1 = Spesa(id = "1", descrizione = "Supermercato Esselunga", importo = 87.40,  categoriaId = "c1", condivisa = true,  tipo = TipoSpesa.VARIABILE.name, mese = 6, anno = 2026, note = "con la carta extra")
-private val _pS2 = Spesa(id = "2", descrizione = "Netflix",                importo = 15.99,  categoriaId = "c2", condivisa = false, tipo = TipoSpesa.FISSA.name,     mese = 6, anno = 2026)
-private val _pS3 = Spesa(id = "3", descrizione = "Farmacia",               importo = 23.50,  categoriaId = "c3", condivisa = true,  tipo = TipoSpesa.VARIABILE.name, mese = 6, anno = 2026)
-private val _pS4 = Spesa(id = "4", descrizione = "Affitto",                importo = 900.00, categoriaId = "c2", condivisa = true,  tipo = TipoSpesa.FISSA.name,     mese = 6, anno = 2026)
+private val _pMembers = mapOf("uid1" to "Daniele", "uid2" to "Sara")
+
+private val _pS1 = Spesa(id = "1", descrizione = "Supermercato Esselunga", importo = 87.40,  categoriaId = "c1", pagante = "uid1", condivisa = true,  tipo = TipoSpesa.VARIABILE.name, mese = 6, anno = 2026, note = "con la carta extra")
+private val _pS2 = Spesa(id = "2", descrizione = "Netflix",                importo = 15.99,  categoriaId = "c2", pagante = "uid2", condivisa = false, tipo = TipoSpesa.FISSA.name,     mese = 6, anno = 2026)
+private val _pS3 = Spesa(id = "3", descrizione = "Farmacia",               importo = 23.50,  categoriaId = "c3", pagante = "uid1", condivisa = true,  tipo = TipoSpesa.VARIABILE.name, mese = 6, anno = 2026)
+private val _pS4 = Spesa(id = "4", descrizione = "Affitto",                importo = 900.00, categoriaId = "c2", pagante = "uid2", condivisa = true,  tipo = TipoSpesa.FISSA.name,     mese = 6, anno = 2026)
 
 @Preview(showBackground = true, name = "RigaSpesa – condivisa variabile")
 @Composable
 private fun RigaSpesaCondivisaPreview() {
-    NoteSpeseTema { RigaSpesa(spesa = _pS1, categoria = _pCat1, onClick = {}) }
+    NoteSpeseTema { RigaSpesa(spesa = _pS1, categoria = _pCat1, membri = _pMembers, onClick = {}) }
 }
 
 @Preview(showBackground = true, name = "RigaSpesa – personale fissa")
 @Composable
 private fun RigaSpesaFissaPreview() {
-    NoteSpeseTema { RigaSpesa(spesa = _pS2, categoria = _pCat2, onClick = {}) }
+    NoteSpeseTema { RigaSpesa(spesa = _pS2, categoria = _pCat2, membri = _pMembers, onClick = {}) }
 }
 
 @Preview(showBackground = true, name = "RigaSpesa – senza categoria")
 @Composable
 private fun RigaSpesaSenzaCatPreview() {
-    NoteSpeseTema { RigaSpesa(spesa = _pS3, categoria = null, onClick = {}) }
+    NoteSpeseTema { RigaSpesa(spesa = _pS3, categoria = null, membri = _pMembers, onClick = {}) }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -516,6 +521,7 @@ private fun SpesaContentPreview() {
                 nomeGruppo   = "Famiglia Rossi",
                 spese        = listOf(_pS1, _pS2, _pS3, _pS4),
                 categorie    = listOf(_pCat1, _pCat2, _pCat3),
+                membri       = _pMembers,
                 periodoLabel = "Giugno 2026",
                 mese = 6, anno = 2026,
             ),

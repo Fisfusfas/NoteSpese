@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.notespese.data.model.Categoria
+import com.app.notespese.data.model.Membro
 import com.app.notespese.data.model.Spesa
 import com.app.notespese.data.repository.CategoriaRepository
 import com.app.notespese.data.repository.GruppoRepository
@@ -40,6 +41,7 @@ class SpesaViewModel @Inject constructor(
             val nomeGruppo: String,
             val spese: List<Spesa>,
             val categorie: List<Categoria>,
+            val membri: Map<String, String> = emptyMap(),
             val periodoLabel: String,
             val mese: Int,
             val anno: Int,
@@ -51,6 +53,7 @@ class SpesaViewModel @Inject constructor(
     private val _meseAnno = MutableStateFlow(now.monthValue to now.year)
 
     private val categorieFlow = categoriaRepository.osservaCategorie(gruppoId)
+    private val membriFlow    = gruppoRepository.osservaMembri(gruppoId)
 
     val uiState: StateFlow<UiState> = _meseAnno
         .flatMapLatest { (mese, anno) ->
@@ -67,11 +70,12 @@ class SpesaViewModel @Inject constructor(
                         toTimestamp(end.plusDays(1))
                     )
                 }
-                combine(speseFlow, categorieFlow) { spese, categorie ->
+                combine(speseFlow, categorieFlow, membriFlow) { spese, categorie, membri ->
                     UiState.Successo(
                         nomeGruppo   = gruppo.nome,
                         spese        = spese.sortedByDescending { it.data?.seconds ?: 0L },
                         categorie    = categorie,
+                        membri       = membri.associate { it.userId to it.nominativoLocale.ifBlank { it.userId } },
                         periodoLabel = etichettaPeriodo(giornoInizio, mese, anno),
                         mese         = mese,
                         anno         = anno,

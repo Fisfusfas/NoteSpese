@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Balance
 import androidx.compose.material.icons.filled.BarChart
@@ -59,7 +58,7 @@ import com.app.notespese.ui.spese.SpesaViewModel
 @Composable
 fun GruppoHomeScreen(
     gruppoId: String,
-    onNavigateBack: () -> Unit,
+    onApriGruppi: () -> Unit,
     onApriImpostazioni: (String) -> Unit,
     onApriStatistiche: (String) -> Unit,
     onApriAggiungiSpesa: (String) -> Unit,
@@ -126,7 +125,7 @@ fun GruppoHomeScreen(
     }
 
     val tabs = listOf(
-        Triple("Home",     Icons.Default.Home,         0),
+        Triple("Gruppi",   Icons.Default.Home,         0),
         Triple("Spese",    Icons.Default.ShoppingCart, 1),
         Triple("Entrate",  Icons.Default.TrendingUp,   2),
         Triple("Saldi",    Icons.Default.Balance,      3),
@@ -164,11 +163,6 @@ fun GruppoHomeScreen(
                         )
                     }
                 },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
-                    }
-                },
                 actions = {
                     IconButton(onClick = { onApriStatistiche(gruppoId) }) {
                         Icon(Icons.Default.BarChart, contentDescription = "Statistiche")
@@ -184,7 +178,7 @@ fun GruppoHomeScreen(
                 tabs.forEach { (label, icon, index) ->
                     NavigationBarItem(
                         selected = selectedTab == index,
-                        onClick  = { selectedTab = index },
+                        onClick  = { if (index == 0) onApriGruppi() else selectedTab = index },
                         icon     = { Icon(icon, contentDescription = label) },
                         label    = { Text(label) },
                     )

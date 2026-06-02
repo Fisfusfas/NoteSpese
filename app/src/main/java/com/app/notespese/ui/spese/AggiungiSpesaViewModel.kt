@@ -3,6 +3,7 @@ package com.app.notespese.ui.spese
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -21,6 +22,7 @@ import com.google.firebase.Timestamp
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -54,7 +56,9 @@ class AggiungiSpesaViewModel @Inject constructor(
     var tipo            by mutableStateOf(TipoSpesa.VARIABILE)
     var dataSelezionata by mutableStateOf(LocalDate.now())
     var note            by mutableStateOf("")
-    var erroreImporto   by mutableStateOf(false)
+    var erroreImporto        by mutableStateOf(false)
+    var categoriaConsigliata by mutableStateOf<String?>(null)
+        private set
 
     sealed interface Esito {
         data object Inattivo    : Esito
@@ -74,10 +78,21 @@ class AggiungiSpesaViewModel @Inject constructor(
         .osservaMembri(gruppoId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    private var storicoSpese: List<Spesa> = emptyList()
+
     init {
         viewModelScope.launch {
             val utente = authRepository.utenteCorrente.first()
             if (utente != null) pagante = utente.id
+        }
+        viewModelScope.launch {
+            storicoSpese = runCatching { spesaRepository.osservaSpese(gruppoId).first() }
+                .getOrDefault(emptyList())
+        }
+        viewModelScope.launch {
+            snapshotFlow { descrizione }
+                .debounce(400)
+                .collect { testo -> aggiornaSuggerimento(testo) }
         }
         spesaId?.let { id ->
             viewModelScope.launch {
@@ -153,6 +168,22 @@ class AggiungiSpesaViewModel @Inject constructor(
         if (totalePrecedente <= budget && totaleCorrente > budget) {
             val nome = categorie.value.find { it.id == catId }?.nome ?: catId
             notificationHelper.mostraBudgetSuperato(nome, totaleCorrente, budget)
+        }
+    }
+
+    private fun aggiornaSuggerimento(testo: String) {
+        if (testo.length < 3 || isModifica) {
+            categoriaConsigliata = null
+            return
+        }
+        val candidato = storicoSpese
+            .filter { it.descrizione.contains(testo, ignoreCase = true) && it.categoriaId.isNotBlank() }
+            .groupBy { it.categoriaId }
+            .maxByOrNull { it.value.size }
+            ?.key
+        categoriaConsigliata = candidato
+        if (candidato != null && categoriaId.isEmpty()) {
+            categoriaId = candidato
         }
     }
 

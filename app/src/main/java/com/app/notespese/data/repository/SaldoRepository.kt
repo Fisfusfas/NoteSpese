@@ -27,4 +27,13 @@ interface SaldoRepository {
 
     /** Creditore conferma la ricezione. */
     suspend fun confermaPagamento(gruppoId: String, meseId: String, saldoId: String): Result<Unit>
+
+    /** Imposta una rettifica manuale sull'importo (positivo = extra debito, negativo = riduzione). */
+    suspend fun aggiornaRettifica(
+        gruppoId: String,
+        meseId: String,
+        saldoId: String,
+        importoExtra: Double,
+        noteExtra: String,
+    ): Result<Unit>
 }

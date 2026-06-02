@@ -4,6 +4,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.app.notespese.data.repository.CategoriaRepository
 import com.app.notespese.data.repository.EntrataRepository
 import com.app.notespese.data.repository.GruppoRepository
 import com.app.notespese.data.repository.SpesaRepository
@@ -23,12 +24,17 @@ private val PALETTE_UTENTI = listOf(
     Color(0xFF6A1B9A), Color(0xFF00838F), Color(0xFFAD1457),
 )
 
+private fun parseColoreHex(hex: String): Color = runCatching {
+    Color(android.graphics.Color.parseColor(hex))
+}.getOrDefault(Color(0xFF9E9E9E))
+
 @HiltViewModel
 class GraficiViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val spesaRepository: SpesaRepository,
     private val entrataRepository: EntrataRepository,
     private val gruppoRepository: GruppoRepository,
+    private val categoriaRepository: CategoriaRepository,
 ) : ViewModel() {
 
     val gruppoId: String = checkNotNull(savedStateHandle["gruppoId"])
@@ -46,6 +52,13 @@ class GraficiViewModel @Inject constructor(
         val entrate: Double,
     )
 
+    data class CategoriaBar(
+        val nome: String,
+        val totale: Double,
+        val colore: Color,
+        val percentuale: Float,
+    )
+
     sealed interface UiState {
         data object Caricamento : UiState
         data class Successo(
@@ -53,6 +66,7 @@ class GraficiViewModel @Inject constructor(
             val mesiBar: List<MeseBar>,
             val meseLabel: String,
             val totaleEntrate: Double,
+            val categorieBar: List<CategoriaBar>,
         ) : UiState
         data class Errore(val messaggio: String) : UiState
     }
@@ -95,6 +109,11 @@ class GraficiViewModel @Inject constructor(
                 val months      = (5 downTo 0).map { now.minusMonths(it.toLong()) }
                 val speseJobs   = months.map { ym -> async { spesaRepository.osservaSpesePerMese(gruppoId, ym.monthValue, ym.year).first() } }
                 val entrateJobs = months.map { ym -> async { entrataRepository.osservaEntratePerMese(gruppoId, ym.monthValue, ym.year).first() } }
+
+                // Storico completo per grafici "da sempre"
+                val speseStoricoJob = async { spesaRepository.osservaSpese(gruppoId).first() }
+                val categorieJob    = async { categoriaRepository.osservaCategorie(gruppoId).first() }
+
                 val speseList   = speseJobs.map { it.await() }
                 val entrateList = entrateJobs.map { it.await() }
 
@@ -107,11 +126,31 @@ class GraficiViewModel @Inject constructor(
                     )
                 }
 
+                // Spese per categoria (storico totale) — max 10 categorie ordinate per importo
+                val categMap = categorieJob.await().associate { it.id to it }
+                val speseRaw = speseStoricoJob.await()
+                    .filter { it.categoriaId.isNotBlank() }
+                    .groupBy { it.categoriaId }
+                    .map { (catId, lista) ->
+                        val cat = categMap[catId]
+                        CategoriaBar(
+                            nome        = cat?.nome ?: catId.take(10),
+                            totale      = lista.sumOf { it.importo },
+                            colore      = parseColoreHex(cat?.colore ?: "#9E9E9E"),
+                            percentuale = 0f,
+                        )
+                    }
+                    .filter { it.totale > 0.0 }
+                    .sortedByDescending { it.totale }
+                    .take(10)
+                val maxCat = speseRaw.maxOfOrNull { it.totale }?.coerceAtLeast(1.0) ?: 1.0
+                val categorieBar = speseRaw.map { it.copy(percentuale = (it.totale / maxCat).toFloat()) }
+
                 val meseLabel = java.time.LocalDate.of(now.year, now.monthValue, 1)
                     .format(java.time.format.DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ITALIAN))
                     .replaceFirstChar { it.uppercase() }
 
-                _uiState.value = UiState.Successo(perUtente, mesiBar, meseLabel, totaleEntrate)
+                _uiState.value = UiState.Successo(perUtente, mesiBar, meseLabel, totaleEntrate, categorieBar)
             } catch (e: Exception) {
                 _uiState.value = UiState.Errore(e.message ?: "Errore nel caricamento")
             }

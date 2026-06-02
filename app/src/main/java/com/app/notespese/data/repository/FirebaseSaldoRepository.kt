@@ -104,13 +104,32 @@ class FirebaseSaldoRepository @Inject constructor(
         // 5. Calcola
         val nuoviSaldi = calcolaUseCase(spese, membri, effectiveConfig)
 
-        // 6. Batch: elimina vecchi saldi, scrivi i nuovi
+        // 6. Leggi saldi esistenti per preservare statoDebitore/statoCreditore/note/date
         val saldiCollRef = meseDocRef.collection("saldi")
         val vecchi = saldiCollRef.get().await()
+        val vecchiMap = vecchi.documents.associate { doc ->
+            doc.id to doc.toObject(Saldo::class.java)
+        }
 
+        // 7. Merge: se la coppia esiste già, conserva metadati di pagamento e rettifica manuale —
+        //    l'importo ricalcolato sovrascrive sempre quello precedente.
+        val saldiFinali = nuoviSaldi.map { nuovo ->
+            val vecchio = vecchiMap[nuovo.id]
+            if (vecchio != null) nuovo.copy(
+                statoDebitore  = vecchio.statoDebitore,
+                statoCreditore = vecchio.statoCreditore,
+                dataPagamento  = vecchio.dataPagamento,
+                dataConferma   = vecchio.dataConferma,
+                note           = vecchio.note,
+                importoExtra   = vecchio.importoExtra,
+                noteExtra      = vecchio.noteExtra,
+            ) else nuovo
+        }
+
+        // 8. Batch: elimina vecchi saldi, scrivi i nuovi con stato preservato
         firestore.runBatch { batch ->
             vecchi.documents.forEach { batch.delete(it.reference) }
-            nuoviSaldi.forEach { saldo -> batch.set(saldiCollRef.document(saldo.id), saldo) }
+            saldiFinali.forEach { saldo -> batch.set(saldiCollRef.document(saldo.id), saldo) }
             // Crea MeseConfig se non esiste
             if (!meseSnap.exists()) batch.set(meseDocRef, MeseConfig(id = meseId))
         }.await()
@@ -130,6 +149,21 @@ class FirebaseSaldoRepository @Inject constructor(
             mapOf(
                 "statoCreditore" to StatoCreditore.CONFERMATO.name,
                 "dataConferma"   to Timestamp.now(),
+            )
+        ).await()
+    }
+
+    override suspend fun aggiornaRettifica(
+        gruppoId: String,
+        meseId: String,
+        saldoId: String,
+        importoExtra: Double,
+        noteExtra: String,
+    ): Result<Unit> = runCatching {
+        saldiRef(gruppoId, meseId).document(saldoId).update(
+            mapOf(
+                "importoExtra" to importoExtra,
+                "noteExtra"    to noteExtra,
             )
         ).await()
     }

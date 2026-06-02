@@ -60,6 +60,7 @@ import com.app.notespese.data.model.Membro
 import com.app.notespese.data.model.Spesa
 import com.app.notespese.data.model.TipoSpesa
 import com.app.notespese.ui.gruppi.parseColore
+import com.app.notespese.ui.theme.SuccessGreen
 import java.text.NumberFormat
 import java.time.Instant
 import java.time.ZoneId
@@ -67,7 +68,7 @@ import java.time.format.DateTimeFormatter.ofPattern
 import java.util.Locale
 
 private val PALETTE_PAGANTI = listOf(
-    Color(0xFF1565C0), Color(0xFF2E7D32), Color(0xFFE65100),
+    Color(0xFF1565C0), SuccessGreen, Color(0xFFE65100),
     Color(0xFF6A1B9A), Color(0xFF00838F), Color(0xFFAD1457),
 )
 private fun colorePagante(idx: Int): Color = PALETTE_PAGANTI[idx % PALETTE_PAGANTI.size]
@@ -395,7 +396,7 @@ private fun TabPersonali(state: AnalisiMeseViewModel.UiState.Successo, onModific
                     HorizontalDivider(modifier = Modifier.padding(horizontal = 14.dp))
                     Column(modifier = Modifier.padding(start = 28.dp, end = 14.dp, bottom = 8.dp)) {
                         ss.sortedByDescending { it.data?.seconds ?: 0 }.forEach { spesa ->
-                            RigaSpesaDettaglio(spesa = spesa, membri = state.membri, onClick = { onModificaSpesa(spesa.id) })
+                            RigaSpesaDettaglio(spesa = spesa, membri = state.membri, mostraChipCondivisa = false, onClick = { onModificaSpesa(spesa.id) })
                             Spacer(Modifier.height(4.dp))
                         }
                     }
@@ -493,7 +494,7 @@ private fun RiepilogoCard(totaleSpese: Double, totaleEntrate: Double, fmt: Numbe
                         text       = fmt.format(totaleEntrate),
                         style      = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color      = Color(0xFF2E7D32),
+                        color      = SuccessGreen,
                     )
                 }
             }
@@ -572,7 +573,7 @@ private fun CardCategoria(
 // ── Riga spesa dettaglio ───────────────────────────────────────────────────────
 
 @Composable
-private fun RigaSpesaDettaglio(spesa: Spesa, membri: List<Membro>, onClick: (() -> Unit)? = null) {
+private fun RigaSpesaDettaglio(spesa: Spesa, membri: List<Membro>, mostraChipCondivisa: Boolean = true, onClick: (() -> Unit)? = null) {
     val dataLabel = remember(spesa.data) {
         spesa.data?.toDate()?.let { date ->
             Instant.ofEpochMilli(date.time).atZone(ZoneId.systemDefault()).toLocalDate()
@@ -591,7 +592,7 @@ private fun RigaSpesaDettaglio(spesa: Spesa, membri: List<Membro>, onClick: (() 
         shape    = RoundedCornerShape(8.dp),
     ) {
         Row(
-            modifier          = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
+            modifier          = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
@@ -612,27 +613,29 @@ private fun RigaSpesaDettaglio(spesa: Spesa, membri: List<Membro>, onClick: (() 
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    SuggestionChip(
-                        onClick  = {},
-                        label    = { Text(if (spesa.condivisa) "Condivisa" else "Personale", style = MaterialTheme.typography.labelSmall) },
-                        colors   = SuggestionChipDefaults.suggestionChipColors(
-                            containerColor = if (spesa.condivisa)
-                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
-                            else
-                                MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f),
-                        ),
-                        modifier = Modifier.height(18.dp),
-                    )
+                    if (mostraChipCondivisa) {
+                        SuggestionChip(
+                            onClick  = {},
+                            label    = { Text(if (spesa.condivisa) "Condivisa" else "Personale", style = MaterialTheme.typography.labelSmall) },
+                            colors   = SuggestionChipDefaults.suggestionChipColors(
+                                containerColor = if (spesa.condivisa)
+                                    MaterialTheme.colorScheme.primaryContainer
+                                else
+                                    MaterialTheme.colorScheme.secondaryContainer,
+                            ),
+                            modifier = Modifier.height(20.dp),
+                        )
+                    }
                     SuggestionChip(
                         onClick  = {},
                         label    = { Text(if (spesa.tipo == TipoSpesa.FISSA.name) "Fissa" else "Variabile", style = MaterialTheme.typography.labelSmall) },
                         colors   = SuggestionChipDefaults.suggestionChipColors(
                             containerColor = if (spesa.tipo == TipoSpesa.FISSA.name)
-                                MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.7f)
+                                MaterialTheme.colorScheme.tertiaryContainer
                             else
                                 MaterialTheme.colorScheme.surfaceVariant,
                         ),
-                        modifier = Modifier.height(18.dp),
+                        modifier = Modifier.height(20.dp),
                     )
                 }
                 if (spesa.note.isNotBlank()) {

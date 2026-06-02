@@ -2,7 +2,6 @@ package com.app.notespese.ui.spese
 
 import androidx.compose.ui.tooling.preview.Preview
 import com.app.notespese.ui.theme.NoteSpeseTema
-import androidx.compose.foundation.lazy.items
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,6 +27,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -53,9 +53,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.app.notespese.data.model.TipoSpesa
-import com.app.notespese.ui.common.CategoriaSelector
+import com.app.notespese.ui.common.CategoriaGrid
 import java.time.Instant
-import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -74,8 +73,8 @@ fun AggiungiSpesaScreen(
     val categorie by viewModel.categorie.collectAsStateWithLifecycle()
     val membri    by viewModel.membri.collectAsStateWithLifecycle()
 
-    var showDatePicker by rememberSaveable { mutableStateOf(false) }
-    var showNote by rememberSaveable { mutableStateOf(false) }
+    var showDatePicker   by rememberSaveable { mutableStateOf(false) }
+    var showNote         by rememberSaveable { mutableStateOf(false) }
     var dropdownExpanded by remember { mutableStateOf(false) }
 
     LaunchedEffect(viewModel.note) {
@@ -103,32 +102,34 @@ fun AggiungiSpesaScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
 
-            // ── Importo rapido ─────────────────────────────────────────────────
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(5, 10, 20, 50, 100).forEach { amount ->
-                    FilterChip(
-                        selected = viewModel.importoText == amount.toString(),
-                        onClick  = {
-                            viewModel.importoText  = amount.toString()
-                            viewModel.erroreImporto = false
-                        },
-                        label    = { Text("€$amount") },
-                    )
+            // ── Importo ────────────────────────────────────────────────────────
+            Column(
+                modifier              = Modifier.fillMaxWidth(),
+                verticalArrangement   = Arrangement.spacedBy(8.dp),
+            ) {
+                OutlinedTextField(
+                    value           = viewModel.importoText,
+                    onValueChange   = { viewModel.importoText = it; viewModel.erroreImporto = false },
+                    label           = { Text("Importo *") },
+                    prefix          = { Text("€", style = MaterialTheme.typography.headlineSmall) },
+                    textStyle       = MaterialTheme.typography.headlineSmall,
+                    singleLine      = true,
+                    isError         = viewModel.erroreImporto,
+                    supportingText  = if (viewModel.erroreImporto) {{ Text("Inserisci un importo valido") }} else null,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier        = Modifier.fillMaxWidth(),
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf(5, 10, 20, 50, 100).forEach { amount ->
+                        FilterChip(
+                            selected = viewModel.importoText == amount.toString(),
+                            onClick  = { viewModel.importoText = amount.toString(); viewModel.erroreImporto = false },
+                            label    = { Text("€$amount") },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
                 }
             }
-
-            // ── Importo ────────────────────────────────────────────────────────
-            OutlinedTextField(
-                value         = viewModel.importoText,
-                onValueChange = { viewModel.importoText = it; viewModel.erroreImporto = false },
-                label         = { Text("Importo *") },
-                prefix        = { Text("€") },
-                singleLine    = true,
-                isError       = viewModel.erroreImporto,
-                supportingText = if (viewModel.erroreImporto) {{ Text("Inserisci un importo valido") }} else null,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                modifier      = Modifier.fillMaxWidth(),
-            )
 
             // ── Descrizione ────────────────────────────────────────────────────
             OutlinedTextField(
@@ -139,105 +140,106 @@ fun AggiungiSpesaScreen(
                 modifier      = Modifier.fillMaxWidth(),
             )
 
-            // ── Categoria ──────────────────────────────────────────────────────
-            CategoriaSelector(
+            HorizontalDivider()
+
+            // ── Categoria (griglia) ────────────────────────────────────────────
+            CategoriaGrid(
                 categorie              = categorie,
                 categoriaSelezionataId = viewModel.categoriaId,
+                categoriaConsigliatId  = viewModel.categoriaConsigliata,
                 onSeleziona            = { viewModel.categoriaId = it },
                 onCreaCategoria        = { nome, colore, icona -> viewModel.creaCategoria(nome, colore, icona) },
             )
 
-            // ── Chi paga ───────────────────────────────────────────────────────
-            if (membri.size > 1) {
-                ExposedDropdownMenuBox(
-                    expanded         = dropdownExpanded,
-                    onExpandedChange = { dropdownExpanded = it },
-                ) {
-                    val membroCorrente = membri.find { it.userId == viewModel.pagante }
-                    val labelPagante = membroCorrente?.nominativoLocale?.ifBlank { null }
-                        ?: membroCorrente?.userId?.take(10)
-                        ?: "Seleziona"
-                    OutlinedTextField(
-                        value         = labelPagante,
-                        onValueChange = {},
-                        readOnly      = true,
-                        label         = { Text("Chi paga") },
-                        trailingIcon  = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownExpanded) },
-                        modifier      = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
-                    )
-                    ExposedDropdownMenu(
-                        expanded         = dropdownExpanded,
-                        onDismissRequest = { dropdownExpanded = false },
-                    ) {
-                        membri.forEach { membro ->
-                            val nome = membro.nominativoLocale.ifBlank { membro.userId.take(10) }
-                            DropdownMenuItem(
-                                text    = { Text(nome) },
-                                onClick = { viewModel.pagante = membro.userId; dropdownExpanded = false },
-                            )
-                        }
-                    }
-                }
-            }
+            HorizontalDivider()
 
-            // ── Condivisa ──────────────────────────────────────────────────────
+            // ── Chi paga + Condivisa (riga compatta) ───────────────────────────
             if (membri.size > 1) {
                 Row(
-                    modifier          = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier              = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment     = Alignment.CenterVertically,
                 ) {
-                    Column {
-                        Text("Spesa condivisa", style = MaterialTheme.typography.bodyLarge)
+                    ExposedDropdownMenuBox(
+                        expanded         = dropdownExpanded,
+                        onExpandedChange = { dropdownExpanded = it },
+                        modifier         = Modifier.weight(1f),
+                    ) {
+                        val membroCorrente = membri.find { it.userId == viewModel.pagante }
+                        val labelPagante   = membroCorrente?.nominativoLocale?.ifBlank { null }
+                            ?: membroCorrente?.userId?.take(10)
+                            ?: "Seleziona"
+                        OutlinedTextField(
+                            value         = labelPagante,
+                            onValueChange = {},
+                            readOnly      = true,
+                            label         = { Text("Chi paga") },
+                            trailingIcon  = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownExpanded) },
+                            singleLine    = true,
+                            modifier      = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
+                        )
+                        ExposedDropdownMenu(
+                            expanded         = dropdownExpanded,
+                            onDismissRequest = { dropdownExpanded = false },
+                        ) {
+                            membri.forEach { membro ->
+                                val nome = membro.nominativoLocale.ifBlank { membro.userId.take(10) }
+                                DropdownMenuItem(
+                                    text    = { Text(nome) },
+                                    onClick = { viewModel.pagante = membro.userId; dropdownExpanded = false },
+                                )
+                            }
+                        }
+                    }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text  = "Verrà divisa tra i membri del gruppo",
-                            style = MaterialTheme.typography.bodySmall,
+                            text  = "Condivisa",
+                            style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                        Switch(
+                            checked         = viewModel.condivisa,
+                            onCheckedChange = { viewModel.condivisa = it },
+                        )
                     }
-                    Switch(
-                        checked         = viewModel.condivisa,
-                        onCheckedChange = { viewModel.condivisa = it },
-                    )
                 }
+                HorizontalDivider()
             }
 
-            // ── Tipo ───────────────────────────────────────────────────────────
+            // ── Data + Tipo fissa (riga compatta) ──────────────────────────────
             Row(
                 modifier              = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment     = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Column {
-                    Text("Spesa fissa", style = MaterialTheme.typography.bodyLarge)
+                val dataLabel = remember(viewModel.dataSelezionata) {
+                    DateTimeFormatter.ofPattern("d MMM yyyy", Locale.ITALIAN).format(viewModel.dataSelezionata)
+                }
+                OutlinedTextField(
+                    value         = dataLabel,
+                    onValueChange = {},
+                    readOnly      = true,
+                    label         = { Text("Data") },
+                    trailingIcon  = {
+                        IconButton(onClick = { showDatePicker = true }) {
+                            Icon(Icons.Default.CalendarToday, contentDescription = "Scegli data")
+                        }
+                    },
+                    singleLine    = true,
+                    modifier      = Modifier.weight(1f),
+                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text  = "Bolletta, affitto, abbonamento…",
-                        style = MaterialTheme.typography.bodySmall,
+                        text  = "Fissa",
+                        style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    Switch(
+                        checked         = viewModel.tipo == TipoSpesa.FISSA,
+                        onCheckedChange = { viewModel.tipo = if (it) TipoSpesa.FISSA else TipoSpesa.VARIABILE },
+                    )
                 }
-                Switch(
-                    checked         = viewModel.tipo == TipoSpesa.FISSA,
-                    onCheckedChange = { viewModel.tipo = if (it) TipoSpesa.FISSA else TipoSpesa.VARIABILE },
-                )
             }
-
-            // ── Data ───────────────────────────────────────────────────────────
-            val dataLabel = remember(viewModel.dataSelezionata) {
-                DateTimeFormatter.ofPattern("d MMMM yyyy", Locale.ITALIAN).format(viewModel.dataSelezionata)
-            }
-            OutlinedTextField(
-                value         = dataLabel,
-                onValueChange = {},
-                readOnly      = true,
-                label         = { Text("Data") },
-                trailingIcon  = {
-                    IconButton(onClick = { showDatePicker = true }) {
-                        Icon(Icons.Default.CalendarToday, contentDescription = "Scegli data")
-                    }
-                },
-                modifier      = Modifier.fillMaxWidth(),
-            )
 
             // ── Note (collapsibile) ────────────────────────────────────────────
             TextButton(
@@ -257,7 +259,7 @@ fun AggiungiSpesaScreen(
                 )
             }
 
-            // ── Bottone salva ──────────────────────────────────────────────────
+            // ── Salva ──────────────────────────────────────────────────────────
             Button(
                 onClick  = { viewModel.salva() },
                 enabled  = esito !is AggiungiSpesaViewModel.Esito.Caricamento,
@@ -317,7 +319,7 @@ private fun AggiungiSpesaPreview() {
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text("Nuova spesa") },
+                    title          = { Text("Nuova spesa") },
                     navigationIcon = { IconButton(onClick = {}) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } },
                 )
             },
@@ -328,24 +330,34 @@ private fun AggiungiSpesaPreview() {
                     .padding(padding)
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                // Quick amount chips
-                androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(listOf("€ 5", "€ 10", "€ 20", "€ 50", "€ 100")) { label ->
-                        FilterChip(selected = false, onClick = {}, label = { Text(label) })
+                OutlinedTextField(
+                    value           = "",
+                    onValueChange   = {},
+                    label           = { Text("Importo *") },
+                    prefix          = { Text("€", style = MaterialTheme.typography.headlineSmall) },
+                    textStyle       = MaterialTheme.typography.headlineSmall,
+                    singleLine      = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier        = Modifier.fillMaxWidth(),
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf("€5", "€10", "€20", "€50", "€100").forEach { label ->
+                        FilterChip(selected = false, onClick = {}, label = { Text(label) }, modifier = Modifier.weight(1f))
                     }
                 }
-                OutlinedTextField(value = "", onValueChange = {}, label = { Text("Importo *") }, prefix = { Text("€") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                OutlinedTextField(value = "Supermercato", onValueChange = {}, label = { Text("Descrizione") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                OutlinedTextField(value = "15 giu 2026", onValueChange = {}, label = { Text("Data") }, readOnly = true, trailingIcon = { Icon(Icons.Default.CalendarToday, null) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                    Column { Text("Spesa fissa", style = MaterialTheme.typography.bodyLarge); Text("Bolletta, affitto…", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                    Switch(checked = false, onCheckedChange = {})
-                }
-                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                    Column { Text("Spesa condivisa", style = MaterialTheme.typography.bodyLarge); Text("Inclusa nel calcolo saldi", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                    Switch(checked = true, onCheckedChange = {})
+                OutlinedTextField(value = "Supermercato", onValueChange = {}, label = { Text("Descrizione") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                HorizontalDivider()
+                Text("Categoria", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("(griglia categorie)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                HorizontalDivider()
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedTextField(value = "15 giu 2026", onValueChange = {}, label = { Text("Data") }, readOnly = true, trailingIcon = { Icon(Icons.Default.CalendarToday, null) }, singleLine = true, modifier = Modifier.weight(1f))
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Fissa", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Switch(checked = false, onCheckedChange = {})
+                    }
                 }
                 Button(onClick = {}, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Salva spesa") }
             }

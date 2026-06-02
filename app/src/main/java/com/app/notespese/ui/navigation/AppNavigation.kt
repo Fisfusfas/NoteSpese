@@ -69,7 +69,7 @@ fun AppNavigation(
             val gruppoId = backStackEntry.arguments?.getString("gruppoId") ?: return@composable
             GruppoHomeScreen(
                 gruppoId              = gruppoId,
-                onNavigateBack        = { navController.popBackStack() },
+                onApriGruppi          = { navController.popBackStack() },
                 onApriImpostazioni    = { id -> navController.navigate(Screen.ImpostazioniGruppo.withId(id)) },
                 onApriStatistiche     = { id -> navController.navigate(Screen.Statistiche.withId(id)) },
                 onApriAggiungiSpesa   = { id -> navController.navigate(Screen.AggiungiSpesa.withId(id)) },

@@ -1,6 +1,5 @@
 package com.app.notespese.ui.dashboard
 
-import androidx.compose.ui.tooling.preview.Preview
 import com.app.notespese.ui.theme.NoteSpeseTema
 import com.app.notespese.data.model.Entrata
 import com.app.notespese.data.model.Gruppo
@@ -55,8 +54,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.app.notespese.ui.theme.SuccessGreen
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -169,7 +170,7 @@ private fun DashboardPageContent(
     val totaleEntrate  = state.entrateDelMese.sumOf { it.importo }
     val saldo          = totaleEntrate - totaleSpese
     val residuoTotale  = state.totaleEntrateTotali - state.totaleSpeseTotali
-    val coloreVerde    = Color(0xFF2E7D32)
+    val coloreVerde    = SuccessGreen
 
     LazyColumn(
         modifier       = modifier.fillMaxSize(),
@@ -539,13 +540,13 @@ private fun CardRiepilogoPreview() {
 @Preview(showBackground = true, name = "CardSaldoRiga – positivo")
 @Composable
 private fun CardSaldoPositivoPreview() {
-    NoteSpeseTema { CardSaldoRiga(label = "Saldo del periodo", valore = 1246.61, coloreVerde = Color(0xFF2E7D32)) }
+    NoteSpeseTema { CardSaldoRiga(label = "Saldo del periodo", valore = 1246.61, coloreVerde = SuccessGreen) }
 }
 
 @Preview(showBackground = true, name = "CardSaldoRiga – negativo")
 @Composable
 private fun CardSaldoNegativoPreview() {
-    NoteSpeseTema { CardSaldoRiga(label = "Saldo del periodo", valore = -234.50, coloreVerde = Color(0xFF2E7D32)) }
+    NoteSpeseTema { CardSaldoRiga(label = "Saldo del periodo", valore = -234.50, coloreVerde = SuccessGreen) }
 }
 
 @Preview(name = "DashboardPageContent", device = "spec:width=360dp,height=800dp,dpi=480", showSystemUi = true)

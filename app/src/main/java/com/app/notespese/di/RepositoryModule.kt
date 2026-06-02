@@ -5,16 +5,16 @@ import com.app.notespese.data.repository.CategoriaRepository
 import com.app.notespese.data.repository.DebitoRepository
 import com.app.notespese.data.repository.EntrataRepository
 import com.app.notespese.data.repository.FirebaseBudgetRepository
-import com.app.notespese.data.repository.FirebaseCategoriaRepository
 import com.app.notespese.data.repository.FirebaseDebitoRepository
-import com.app.notespese.data.repository.FirebaseEntrataRepository
-import com.app.notespese.data.repository.FirebaseGruppoRepository
 import com.app.notespese.data.repository.FirebaseInvitoRepository
 import com.app.notespese.data.repository.FirebaseRicorrenzaRepository
 import com.app.notespese.data.repository.FirebaseSaldoRepository
-import com.app.notespese.data.repository.FirebaseSpesaRepository
 import com.app.notespese.data.repository.GruppoRepository
 import com.app.notespese.data.repository.InvitoRepository
+import com.app.notespese.data.repository.OfflineFirstCategoriaRepository
+import com.app.notespese.data.repository.OfflineFirstEntrataRepository
+import com.app.notespese.data.repository.OfflineFirstGruppoRepository
+import com.app.notespese.data.repository.OfflineFirstSpesaRepository
 import com.app.notespese.data.repository.RicorrenzaRepository
 import com.app.notespese.data.repository.SaldoRepository
 import com.app.notespese.data.repository.SpesaRepository
@@ -29,16 +29,16 @@ import javax.inject.Singleton
 abstract class RepositoryModule {
 
     @Binds @Singleton
-    abstract fun bindGruppoRepository(impl: FirebaseGruppoRepository): GruppoRepository
+    abstract fun bindGruppoRepository(impl: OfflineFirstGruppoRepository): GruppoRepository
 
     @Binds @Singleton
-    abstract fun bindSpesaRepository(impl: FirebaseSpesaRepository): SpesaRepository
+    abstract fun bindSpesaRepository(impl: OfflineFirstSpesaRepository): SpesaRepository
 
     @Binds @Singleton
-    abstract fun bindEntrataRepository(impl: FirebaseEntrataRepository): EntrataRepository
+    abstract fun bindEntrataRepository(impl: OfflineFirstEntrataRepository): EntrataRepository
 
     @Binds @Singleton
-    abstract fun bindCategoriaRepository(impl: FirebaseCategoriaRepository): CategoriaRepository
+    abstract fun bindCategoriaRepository(impl: OfflineFirstCategoriaRepository): CategoriaRepository
 
     @Binds @Singleton
     abstract fun bindSaldoRepository(impl: FirebaseSaldoRepository): SaldoRepository

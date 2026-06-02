@@ -27,6 +27,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -45,13 +46,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
+import com.app.notespese.ui.common.SelectoreMese
+import com.app.notespese.ui.theme.SuccessGreen
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -75,7 +77,7 @@ fun SaldoScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // Dialog is shown on top regardless of load state
+    // Dialog di configurazione split
     if (viewModel.showSplitDialog) {
         val state = uiState as? SaldoViewModel.UiState.Successo
         if (state != null) {
@@ -91,6 +93,18 @@ fun SaldoScreen(
         }
     }
 
+    // Dialog rettifica manuale
+    if (viewModel.showRettificaDialog) {
+        DialogRettifica(
+            importo         = viewModel.rettificaImporto,
+            onImportoChange = { viewModel.rettificaImporto = it },
+            nota            = viewModel.rettificaNota,
+            onNotaChange    = { viewModel.rettificaNota = it },
+            onDismiss       = viewModel::chiudiDialogRettifica,
+            onConferma      = viewModel::salvaRettifica,
+        )
+    }
+
     when (val state = uiState) {
         is SaldoViewModel.UiState.Caricamento -> {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
@@ -101,17 +115,15 @@ fun SaldoScreen(
             }
         }
         is SaldoViewModel.UiState.Successo -> {
-            LaunchedEffect(state.mese, state.anno) {
-                viewModel.calcolaESalva()
-            }
             SaldoContent(
                 state               = state,
                 azioneEsito         = viewModel.azioneEsito,
                 onNavigateBack      = onNavigateBack,
                 onCalcola           = viewModel::calcolaESalva,
-                onApriSplitDialog   = viewModel::apriFialogSplit,
+                onApriSplitDialog   = viewModel::apriDialogSplit,
                 onSegnaComePagato   = viewModel::segnaComePagato,
                 onConfermaPagamento = viewModel::confermaPagamento,
+                onApriRettifica     = viewModel::apriDialogRettifica,
                 onMesePrecedente    = viewModel::mesePrecedente,
                 onMeseSuccessivo    = viewModel::meseSuccessivo,
                 onTornaAdOggi       = viewModel::tornaAdOggi,
@@ -130,6 +142,7 @@ private fun SaldoContent(
     onApriSplitDialog: () -> Unit,
     onSegnaComePagato: (String) -> Unit,
     onConfermaPagamento: (String) -> Unit,
+    onApriRettifica: (String) -> Unit,
     onMesePrecedente: () -> Unit,
     onMeseSuccessivo: () -> Unit,
     onTornaAdOggi: () -> Unit,
@@ -154,6 +167,7 @@ private fun SaldoContent(
             onApriSplitDialog   = onApriSplitDialog,
             onSegnaComePagato   = onSegnaComePagato,
             onConfermaPagamento = onConfermaPagamento,
+            onApriRettifica     = onApriRettifica,
             onMesePrecedente    = onMesePrecedente,
             onMeseSuccessivo    = onMeseSuccessivo,
             onTornaAdOggi       = onTornaAdOggi,
@@ -170,6 +184,7 @@ private fun SaldoLazyContent(
     onApriSplitDialog: () -> Unit,
     onSegnaComePagato: (String) -> Unit,
     onConfermaPagamento: (String) -> Unit,
+    onApriRettifica: (String) -> Unit,
     onMesePrecedente: () -> Unit,
     onMeseSuccessivo: () -> Unit,
     onTornaAdOggi: () -> Unit,
@@ -185,28 +200,16 @@ private fun SaldoLazyContent(
 
             // ── Selettore mese ────────────────────────────────────────────────
             item {
-                Row(
-                    modifier              = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
-                    verticalAlignment     = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    IconButton(onClick = onMesePrecedente) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Mese precedente")
-                    }
-                    val etichetta = remember(state.mese, state.anno) {
-                        val fmt = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ITALIAN)
-                        LocalDate.of(state.anno, state.mese, 1).format(fmt).replaceFirstChar { it.uppercase() }
-                    }
-                    Text(
-                        text       = etichetta,
-                        style      = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier   = Modifier.clickable(onClick = onTornaAdOggi),
-                    )
-                    IconButton(onClick = onMeseSuccessivo) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Mese successivo")
-                    }
+                val etichetta = remember(state.mese, state.anno) {
+                    val fmt = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ITALIAN)
+                    LocalDate.of(state.anno, state.mese, 1).format(fmt).replaceFirstChar { it.uppercase() }
                 }
+                SelectoreMese(
+                    periodoLabel  = etichetta,
+                    onPrecedente  = onMesePrecedente,
+                    onSuccessivo  = onMeseSuccessivo,
+                    onTornaAdOggi = onTornaAdOggi,
+                )
             }
 
             // ── Suddivisione + Ricalcola ──────────────────────────────────────
@@ -283,6 +286,7 @@ private fun SaldoLazyContent(
                         caricamento         = caricamento,
                         onSegnaComePagato   = onSegnaComePagato,
                         onConfermaPagamento = onConfermaPagamento,
+                        onApriRettifica     = onApriRettifica,
                     )
                 }
             }
@@ -306,6 +310,7 @@ private fun SaldoLazyContent(
                         caricamento         = false,
                         onSegnaComePagato   = {},
                         onConfermaPagamento = {},
+                        onApriRettifica     = onApriRettifica,
                     )
                 }
             }
@@ -397,18 +402,22 @@ private fun CardSaldo(
     caricamento: Boolean,
     onSegnaComePagato: (String) -> Unit,
     onConfermaPagamento: (String) -> Unit,
+    onApriRettifica: (String) -> Unit,
 ) {
+    val fmt           = NumberFormat.getCurrencyInstance(Locale.ITALY)
     val nomeDebitore  = nomeMembro(saldo.da, membri)
     val nomeCreditore = nomeMembro(saldo.a,  membri)
-
     val sonoDebitore  = saldo.da == userId
     val sonoCreditore = saldo.a  == userId
+    val coloreImporto = if (sonoDebitore) MaterialTheme.colorScheme.error
+                        else if (sonoCreditore) SuccessGreen
+                        else MaterialTheme.colorScheme.onSurface
 
     val containerColor = when {
-        saldo.isSaldato                           -> MaterialTheme.colorScheme.surfaceVariant
-        sonoDebitore                              -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f)
-        sonoCreditore                             -> Color(0xFF2E7D32).copy(alpha = 0.12f)
-        else                                      -> MaterialTheme.colorScheme.surface
+        saldo.isSaldato -> MaterialTheme.colorScheme.surfaceVariant
+        sonoDebitore    -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f)
+        sonoCreditore   -> SuccessGreen.copy(alpha = 0.12f)
+        else            -> MaterialTheme.colorScheme.surface
     }
 
     Card(
@@ -417,41 +426,66 @@ private fun CardSaldo(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
 
+            // ── Intestazione: debitore → creditore + importo totale ────────────
             Row(
-                modifier          = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
+                modifier              = Modifier.fillMaxWidth(),
+                verticalAlignment     = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                    Text(nomeDebitore, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                    Text(nomeDebitore, style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false))
                     Icon(Icons.Default.ArrowForward, contentDescription = null,
                         modifier = Modifier.padding(horizontal = 6.dp).size(16.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(nomeCreditore, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                    Text(nomeCreditore, style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false))
                 }
                 Spacer(Modifier.width(8.dp))
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text       = fmt.format(saldo.importoTotale),
+                        style      = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color      = coloreImporto,
+                    )
+                    // Dettaglio rettifica sotto l'importo totale
+                    if (saldo.importoExtra != 0.0) {
+                        val segno = if (saldo.importoExtra >= 0) "+" else ""
+                        Text(
+                            text  = "${fmt.format(saldo.importoCalcolato)} calc. $segno${fmt.format(saldo.importoExtra)} rett.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+
+            // ── Nota rettifica (se presente) ──────────────────────────────────
+            if (saldo.noteExtra.isNotBlank()) {
+                Spacer(Modifier.height(2.dp))
                 Text(
-                    text       = NumberFormat.getCurrencyInstance(Locale.ITALY).format(saldo.importoCalcolato),
-                    style      = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color      = if (sonoDebitore) MaterialTheme.colorScheme.error
-                                 else if (sonoCreditore) Color(0xFF2E7D32)
-                                 else MaterialTheme.colorScheme.onSurface,
+                    text  = saldo.noteExtra,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
 
+            // ── Stato ──────────────────────────────────────────────────────────
             Spacer(Modifier.height(4.dp))
             val statoTesto = when {
-                saldo.isSaldato                                          -> "Saldato"
-                saldo.statoDebitore == StatoDebitore.PAGATO.name        -> "Pagamento dichiarato — in attesa di conferma"
-                else                                                     -> if (sonoDebitore) "Devi pagare" else "In attesa di pagamento"
+                saldo.isSaldato                                   -> "Saldato"
+                saldo.statoDebitore == StatoDebitore.PAGATO.name -> "Pagamento dichiarato — in attesa di conferma"
+                else -> if (sonoDebitore) "Devi pagare" else "In attesa di pagamento"
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (saldo.isSaldato) {
                     Icon(Icons.Default.CheckCircle, contentDescription = null,
-                        tint = Color(0xFF2E7D32), modifier = Modifier.size(14.dp))
+                        tint = SuccessGreen, modifier = Modifier.size(14.dp))
                     Spacer(Modifier.width(4.dp))
                 }
                 Text(statoTesto, style = MaterialTheme.typography.bodySmall,
@@ -460,6 +494,16 @@ private fun CardSaldo(
 
             if (!saldo.isSaldato) {
                 Spacer(Modifier.height(8.dp))
+                // Bottone rettifica sempre visibile su saldi aperti
+                TextButton(
+                    onClick            = { onApriRettifica(saldo.id) },
+                    contentPadding     = androidx.compose.foundation.layout.PaddingValues(horizontal = 0.dp, vertical = 0.dp),
+                ) {
+                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Rettifica manuale", style = MaterialTheme.typography.labelMedium)
+                }
+                // Azioni di pagamento
                 when {
                     sonoDebitore && saldo.statoDebitore != StatoDebitore.PAGATO.name -> {
                         Button(
@@ -479,6 +523,55 @@ private fun CardSaldo(
             }
         }
     }
+}
+
+// ── Dialog rettifica manuale ──────────────────────────────────────────────────
+
+@Composable
+private fun DialogRettifica(
+    importo: String,
+    onImportoChange: (String) -> Unit,
+    nota: String,
+    onNotaChange: (String) -> Unit,
+    onDismiss: () -> Unit,
+    onConferma: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Rettifica manuale") },
+        text  = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    "Aggiungi un importo extra al saldo calcolato. Usa un valore positivo per aumentare il debito, negativo per ridurlo.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedTextField(
+                    value         = importo,
+                    onValueChange = onImportoChange,
+                    label         = { Text("Importo extra (€)") },
+                    placeholder   = { Text("Es. 30 oppure -10") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine    = true,
+                    modifier      = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value         = nota,
+                    onValueChange = onNotaChange,
+                    label         = { Text("Note (opzionale)") },
+                    placeholder   = { Text("Es. prestito del 5 giugno") },
+                    singleLine    = true,
+                    modifier      = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConferma) { Text("Salva") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Annulla") }
+        },
+    )
 }
 
 // ── Helper ─────────────────────────────────────────────────────────────────────
@@ -512,6 +605,17 @@ fun SaldoTabContent(
         }
     }
 
+    if (viewModel.showRettificaDialog) {
+        DialogRettifica(
+            importo         = viewModel.rettificaImporto,
+            onImportoChange = { viewModel.rettificaImporto = it },
+            nota            = viewModel.rettificaNota,
+            onNotaChange    = { viewModel.rettificaNota = it },
+            onDismiss       = viewModel::chiudiDialogRettifica,
+            onConferma      = viewModel::salvaRettifica,
+        )
+    }
+
     when (val state = uiState) {
         is SaldoViewModel.UiState.Caricamento -> {
             Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
@@ -522,15 +626,15 @@ fun SaldoTabContent(
             }
         }
         is SaldoViewModel.UiState.Successo -> {
-            LaunchedEffect(state.mese, state.anno) { viewModel.calcolaESalva() }
             SaldoLazyContent(
                 state               = state,
                 azioneEsito         = viewModel.azioneEsito,
                 modifier            = modifier,
                 onCalcola           = viewModel::calcolaESalva,
-                onApriSplitDialog   = viewModel::apriFialogSplit,
+                onApriSplitDialog   = viewModel::apriDialogSplit,
                 onSegnaComePagato   = viewModel::segnaComePagato,
                 onConfermaPagamento = viewModel::confermaPagamento,
+                onApriRettifica     = viewModel::apriDialogRettifica,
                 onMesePrecedente    = viewModel::mesePrecedente,
                 onMeseSuccessivo    = viewModel::meseSuccessivo,
                 onTornaAdOggi       = viewModel::tornaAdOggi,
@@ -577,6 +681,7 @@ private fun SaldoContentPreview() {
             onApriSplitDialog   = {},
             onSegnaComePagato   = {},
             onConfermaPagamento = {},
+            onApriRettifica     = {},
             onMesePrecedente    = {},
             onMeseSuccessivo    = {},
             onTornaAdOggi       = {},

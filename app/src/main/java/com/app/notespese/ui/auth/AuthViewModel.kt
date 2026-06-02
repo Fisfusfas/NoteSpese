@@ -10,6 +10,7 @@ import androidx.lifecycle.viewModelScope
 import com.app.notespese.R
 import com.app.notespese.data.model.Utente
 import com.app.notespese.data.repository.AuthRepository
+import com.app.notespese.data.repository.LocalSyncCoordinator
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -25,7 +26,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val localSyncCoordinator: LocalSyncCoordinator,
 ) : ViewModel() {
 
     sealed interface UiState {
@@ -120,6 +122,7 @@ class AuthViewModel @Inject constructor(
     }
 
     fun signOut() {
+        localSyncCoordinator.clearAll()
         viewModelScope.launch {
             authRepository.signOut()
         }
