@@ -1,5 +1,7 @@
 package com.app.notespese.ui.saldi
 
+import androidx.compose.ui.tooling.preview.Preview
+import com.app.notespese.ui.theme.NoteSpeseTema
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -534,5 +536,50 @@ fun SaldoTabContent(
                 onTornaAdOggi       = viewModel::tornaAdOggi,
             )
         }
+    }
+}
+
+// ── Preview ───────────────────────────────────────────────────────────────────
+
+private val _saldo1 = Saldo(id = "alice_bob", da = "alice", a = "bob",
+    importoCalcolato = 134.75,
+    statoDebitore  = StatoDebitore.IN_ATTESA.name,
+    statoCreditore = com.app.notespese.data.model.StatoCreditore.IN_ATTESA.name)
+
+private val _saldo2 = Saldo(id = "bob_carlo", da = "bob", a = "carlo",
+    importoCalcolato = 47.20,
+    statoDebitore  = StatoDebitore.PAGATO.name,
+    statoCreditore = com.app.notespese.data.model.StatoCreditore.CONFERMATO.name)
+
+private val _saldiState = SaldoViewModel.UiState.Successo(
+    nomeGruppo = "Famiglia Rossi",
+    saldi      = listOf(_saldo1, _saldo2),
+    membri     = listOf(
+        Membro(userId = "alice", nominativoLocale = "Alice"),
+        Membro(userId = "bob",   nominativoLocale = "Bob"),
+        Membro(userId = "carlo", nominativoLocale = "Carlo"),
+    ),
+    mese = 6, anno = 2026,
+    userId     = "alice",
+    meseConfig = null,
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview(name = "SaldoContent – con saldi", device = "spec:width=360dp,height=800dp,dpi=480", showSystemUi = true)
+@Composable
+private fun SaldoContentPreview() {
+    NoteSpeseTema {
+        SaldoContent(
+            state               = _saldiState,
+            azioneEsito         = SaldoViewModel.AzioneEsito.Inattivo,
+            onNavigateBack      = {},
+            onCalcola           = {},
+            onApriSplitDialog   = {},
+            onSegnaComePagato   = {},
+            onConfermaPagamento = {},
+            onMesePrecedente    = {},
+            onMeseSuccessivo    = {},
+            onTornaAdOggi       = {},
+        )
     }
 }

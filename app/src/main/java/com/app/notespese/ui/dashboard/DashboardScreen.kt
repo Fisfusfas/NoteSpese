@@ -1,5 +1,10 @@
 package com.app.notespese.ui.dashboard
 
+import androidx.compose.ui.tooling.preview.Preview
+import com.app.notespese.ui.theme.NoteSpeseTema
+import com.app.notespese.data.model.Entrata
+import com.app.notespese.data.model.Gruppo
+import com.app.notespese.data.model.Membro
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -484,3 +489,76 @@ private fun RowSpesa(spesa: Spesa, onClick: () -> Unit) {
 
 private fun formatEuro(importo: Double): String =
     NumberFormat.getCurrencyInstance(Locale.ITALY).format(importo)
+
+// ── Preview ───────────────────────────────────────────────────────────────────
+
+private val _dS1 = Spesa(id = "1", descrizione = "Supermercato",   importo = 87.40,  condivisa = true,  tipo = TipoSpesa.VARIABILE.name, mese = 6, anno = 2026)
+private val _dS2 = Spesa(id = "2", descrizione = "Affitto maggio", importo = 900.00, condivisa = true,  tipo = TipoSpesa.FISSA.name,     mese = 6, anno = 2026)
+private val _dS3 = Spesa(id = "3", descrizione = "Netflix",        importo = 15.99,  condivisa = false, tipo = TipoSpesa.FISSA.name,     mese = 6, anno = 2026)
+
+private val _dashFakeState = DashboardViewModel.UiState.Successo(
+    gruppo = Gruppo(nome = "Famiglia Rossi", icona = "home", colore = "#1565C0"),
+    membri = listOf(
+        Membro(userId = "u1", nominativoLocale = "Mario"),
+        Membro(userId = "u2", nominativoLocale = "Giulia"),
+    ),
+    speseDelMese     = listOf(_dS1, _dS2, _dS3),
+    entrateDelMese   = listOf(Entrata(id = "e1", importo = 2500.0, persona = "u1")),
+    totaleSpeseTotali  = 1450.0,
+    totaleEntrateTotali = 2500.0,
+    periodoLabel = "Giugno 2026",
+    mese = 6, anno = 2026,
+)
+
+@Preview(showBackground = true, name = "RowSpesa – variabile condivisa")
+@Composable
+private fun RowSpesaPreview() {
+    NoteSpeseTema { RowSpesa(spesa = _dS1, onClick = {}) }
+}
+
+@Preview(showBackground = true, name = "RowSpesa – fissa personale")
+@Composable
+private fun RowSpesaFissaPreview() {
+    NoteSpeseTema { RowSpesa(spesa = _dS3, onClick = {}) }
+}
+
+@Preview(showBackground = true, name = "CardRiepilogo – spese")
+@Composable
+private fun CardRiepilogoPreview() {
+    NoteSpeseTema {
+        CardRiepilogo(
+            label       = "Spese",
+            valore      = "€ 1.003,39",
+            icona       = Icons.Default.ShoppingCart,
+            coloreIcona = MaterialTheme.colorScheme.error,
+            onClick     = {},
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "CardSaldoRiga – positivo")
+@Composable
+private fun CardSaldoPositivoPreview() {
+    NoteSpeseTema { CardSaldoRiga(label = "Saldo del periodo", valore = 1246.61, coloreVerde = Color(0xFF2E7D32)) }
+}
+
+@Preview(showBackground = true, name = "CardSaldoRiga – negativo")
+@Composable
+private fun CardSaldoNegativoPreview() {
+    NoteSpeseTema { CardSaldoRiga(label = "Saldo del periodo", valore = -234.50, coloreVerde = Color(0xFF2E7D32)) }
+}
+
+@Preview(name = "DashboardPageContent", device = "spec:width=360dp,height=800dp,dpi=480", showSystemUi = true)
+@Composable
+private fun DashboardPageContentPreview() {
+    NoteSpeseTema {
+        DashboardPageContent(
+            state                = _dashFakeState,
+            onApriAnalisi        = {},
+            onApriAnalisiEntrate = {},
+            onMesePrecedente     = {},
+            onMeseSuccessivo     = {},
+            onTornaAdOggi        = {},
+        )
+    }
+}

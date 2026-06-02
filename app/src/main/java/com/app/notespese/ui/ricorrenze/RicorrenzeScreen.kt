@@ -1,5 +1,9 @@
 package com.app.notespese.ui.ricorrenze
 
+import androidx.compose.ui.tooling.preview.Preview
+import com.app.notespese.ui.theme.NoteSpeseTema
+import com.app.notespese.data.model.Categoria
+import com.app.notespese.data.model.Membro
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -205,5 +209,47 @@ private fun RicorrenzaSwipeItem(
                 .background(MaterialTheme.colorScheme.surface)
                 .clickable(onClick = onModifica),
         )
+    }
+}
+
+// ── Preview ───────────────────────────────────────────────────────────────────
+
+private val _rCat = Categoria(id = "c1", nome = "Utenze", colore = "#FF9800", icona = "bolt")
+private val _rRic1 = Ricorrenza(id = "r1", descrizione = "Affitto",  importo = 900.00, condivisa = true,  giornoDelMese = 1,  attiva = true)
+private val _rRic2 = Ricorrenza(id = "r2", descrizione = "Netflix",  importo = 15.99,  condivisa = false, giornoDelMese = 10, attiva = true)
+private val _rRic3 = Ricorrenza(id = "r3", descrizione = "Palestra", importo = 45.00,  condivisa = false, giornoDelMese = 5,  attiva = false)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview(name = "RicorrenzeScreen – lista", device = "spec:width=360dp,height=800dp,dpi=480", showSystemUi = true)
+@Composable
+private fun RicorrenzePreview() {
+    val fmt = java.text.NumberFormat.getCurrencyInstance(java.util.Locale.ITALY)
+    NoteSpeseTema {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("Ricorrenze") },
+                    navigationIcon = { IconButton(onClick = {}) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } },
+                )
+            },
+            floatingActionButton = { FloatingActionButton(onClick = {}) { Icon(Icons.Default.Add, null) } },
+        ) { padding ->
+            LazyColumn(Modifier.fillMaxSize().padding(padding)) {
+                items(listOf(_rRic1, _rRic2, _rRic3), key = { it.id }) { ric ->
+                    ListItem(
+                        headlineContent   = { Text(ric.descrizione.ifBlank { "Ricorrenza" }) },
+                        supportingContent = { Text("giorno ${ric.giornoDelMese} · ${if (ric.condivisa) "condivisa" else "personale"}", style = MaterialTheme.typography.bodySmall) },
+                        trailingContent   = {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(fmt.format(ric.importo), fontWeight = FontWeight.SemiBold)
+                                Switch(checked = ric.attiva, onCheckedChange = {})
+                            }
+                        },
+                        modifier = Modifier.background(MaterialTheme.colorScheme.surface),
+                    )
+                    HorizontalDivider()
+                }
+            }
+        }
     }
 }

@@ -1,5 +1,7 @@
 package com.app.notespese.ui.spese
 
+import androidx.compose.ui.tooling.preview.Preview
+import com.app.notespese.ui.theme.NoteSpeseTema
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -474,3 +476,79 @@ fun SpesaListContent(
         }
     }
 }
+
+// ── Preview ───────────────────────────────────────────────────────────────────
+
+private val _pCat1 = Categoria(id = "c1", nome = "Alimentari",  colore = "#4CAF50", icona = "shopping_cart")
+private val _pCat2 = Categoria(id = "c2", nome = "Abbonamenti", colore = "#9C27B0", icona = "subscriptions")
+private val _pCat3 = Categoria(id = "c3", nome = "Salute",      colore = "#F44336", icona = "local_hospital")
+
+private val _pS1 = Spesa(id = "1", descrizione = "Supermercato Esselunga", importo = 87.40,  categoriaId = "c1", condivisa = true,  tipo = TipoSpesa.VARIABILE.name, mese = 6, anno = 2026, note = "con la carta extra")
+private val _pS2 = Spesa(id = "2", descrizione = "Netflix",                importo = 15.99,  categoriaId = "c2", condivisa = false, tipo = TipoSpesa.FISSA.name,     mese = 6, anno = 2026)
+private val _pS3 = Spesa(id = "3", descrizione = "Farmacia",               importo = 23.50,  categoriaId = "c3", condivisa = true,  tipo = TipoSpesa.VARIABILE.name, mese = 6, anno = 2026)
+private val _pS4 = Spesa(id = "4", descrizione = "Affitto",                importo = 900.00, categoriaId = "c2", condivisa = true,  tipo = TipoSpesa.FISSA.name,     mese = 6, anno = 2026)
+
+@Preview(showBackground = true, name = "RigaSpesa – condivisa variabile")
+@Composable
+private fun RigaSpesaCondivisaPreview() {
+    NoteSpeseTema { RigaSpesa(spesa = _pS1, categoria = _pCat1, onClick = {}) }
+}
+
+@Preview(showBackground = true, name = "RigaSpesa – personale fissa")
+@Composable
+private fun RigaSpesaFissaPreview() {
+    NoteSpeseTema { RigaSpesa(spesa = _pS2, categoria = _pCat2, onClick = {}) }
+}
+
+@Preview(showBackground = true, name = "RigaSpesa – senza categoria")
+@Composable
+private fun RigaSpesaSenzaCatPreview() {
+    NoteSpeseTema { RigaSpesa(spesa = _pS3, categoria = null, onClick = {}) }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview(name = "SpesaContent – lista", device = "spec:width=360dp,height=800dp,dpi=480", showSystemUi = true)
+@Composable
+private fun SpesaContentPreview() {
+    NoteSpeseTema {
+        SpesaContent(
+            state = SpesaViewModel.UiState.Successo(
+                nomeGruppo   = "Famiglia Rossi",
+                spese        = listOf(_pS1, _pS2, _pS3, _pS4),
+                categorie    = listOf(_pCat1, _pCat2, _pCat3),
+                periodoLabel = "Giugno 2026",
+                mese = 6, anno = 2026,
+            ),
+            onNavigateBack   = {},
+            onAggiungiSpesa  = {},
+            onEliminaSpesa   = {},
+            onModificaSpesa  = {},
+            onMesePrecedente = {},
+            onMeseSuccessivo = {},
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview(showBackground = true, name = "SpesaContent – vuota")
+@Composable
+private fun SpesaContentVuotaPreview() {
+    NoteSpeseTema {
+        SpesaContent(
+            state = SpesaViewModel.UiState.Successo(
+                nomeGruppo   = "Casa",
+                spese        = emptyList(),
+                categorie    = emptyList(),
+                periodoLabel = "Giugno 2026",
+                mese = 6, anno = 2026,
+            ),
+            onNavigateBack   = {},
+            onAggiungiSpesa  = {},
+            onEliminaSpesa   = {},
+            onModificaSpesa  = {},
+            onMesePrecedente = {},
+            onMeseSuccessivo = {},
+        )
+    }
+}
+

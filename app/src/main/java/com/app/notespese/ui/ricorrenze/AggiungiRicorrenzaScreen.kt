@@ -1,5 +1,7 @@
 package com.app.notespese.ui.ricorrenze
 
+import androidx.compose.ui.tooling.preview.Preview
+import com.app.notespese.ui.theme.NoteSpeseTema
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -209,6 +211,42 @@ fun AggiungiRicorrenzaScreen(
             }
 
             Spacer(Modifier.height(8.dp))
+        }
+    }
+}
+
+// ── Preview ───────────────────────────────────────────────────────────────────
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview(name = "AggiungiRicorrenza – form", device = "spec:width=360dp,height=800dp,dpi=480", showSystemUi = true)
+@Composable
+private fun AggiungiRicorrenzaPreview() {
+    NoteSpeseTema {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("Nuova ricorrenza") },
+                    navigationIcon = { IconButton(onClick = {}) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } },
+                )
+            },
+        ) { padding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                OutlinedTextField(value = "15.99", onValueChange = {}, label = { Text("Importo mensile *") }, prefix = { Text("€") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OutlinedTextField(value = "Netflix", onValueChange = {}, label = { Text("Descrizione") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                    Column { Text("Spesa fissa", style = MaterialTheme.typography.bodyLarge); Text("Bolletta, affitto, abbonamento…", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    Switch(checked = true, onCheckedChange = {})
+                }
+                OutlinedTextField(value = "1", onValueChange = {}, label = { Text("Giorno del mese (1-31)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                Button(onClick = {}, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Salva ricorrenza") }
+            }
         }
     }
 }

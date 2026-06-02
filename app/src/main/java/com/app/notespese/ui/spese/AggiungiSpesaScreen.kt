@@ -1,5 +1,8 @@
 package com.app.notespese.ui.spese
 
+import androidx.compose.ui.tooling.preview.Preview
+import com.app.notespese.ui.theme.NoteSpeseTema
+import androidx.compose.foundation.lazy.items
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -300,6 +303,52 @@ fun AggiungiSpesaScreen(
             },
         ) {
             DatePicker(state = datePickerState)
+        }
+    }
+}
+
+// ── Preview ───────────────────────────────────────────────────────────────────
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview(name = "AggiungiSpesa – form vuoto", device = "spec:width=360dp,height=800dp,dpi=480", showSystemUi = true)
+@Composable
+private fun AggiungiSpesaPreview() {
+    NoteSpeseTema {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("Nuova spesa") },
+                    navigationIcon = { IconButton(onClick = {}) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } },
+                )
+            },
+        ) { padding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                // Quick amount chips
+                androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(listOf("€ 5", "€ 10", "€ 20", "€ 50", "€ 100")) { label ->
+                        FilterChip(selected = false, onClick = {}, label = { Text(label) })
+                    }
+                }
+                OutlinedTextField(value = "", onValueChange = {}, label = { Text("Importo *") }, prefix = { Text("€") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OutlinedTextField(value = "Supermercato", onValueChange = {}, label = { Text("Descrizione") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OutlinedTextField(value = "15 giu 2026", onValueChange = {}, label = { Text("Data") }, readOnly = true, trailingIcon = { Icon(Icons.Default.CalendarToday, null) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                    Column { Text("Spesa fissa", style = MaterialTheme.typography.bodyLarge); Text("Bolletta, affitto…", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    Switch(checked = false, onCheckedChange = {})
+                }
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                    Column { Text("Spesa condivisa", style = MaterialTheme.typography.bodyLarge); Text("Inclusa nel calcolo saldi", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    Switch(checked = true, onCheckedChange = {})
+                }
+                Button(onClick = {}, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Salva spesa") }
+            }
         }
     }
 }

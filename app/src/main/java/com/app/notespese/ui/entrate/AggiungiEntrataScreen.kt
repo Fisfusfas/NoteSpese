@@ -1,5 +1,7 @@
 package com.app.notespese.ui.entrate
 
+import androidx.compose.ui.tooling.preview.Preview
+import com.app.notespese.ui.theme.NoteSpeseTema
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,6 +32,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -232,6 +235,38 @@ fun AggiungiEntrataScreen(
             },
         ) {
             DatePicker(state = datePickerState)
+        }
+    }
+}
+
+// ── Preview ───────────────────────────────────────────────────────────────────
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview(name = "AggiungiEntrata – form vuoto", device = "spec:width=360dp,height=800dp,dpi=480", showSystemUi = true)
+@Composable
+private fun AggiungiEntrataPreview() {
+    NoteSpeseTema {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("Nuova entrata") },
+                    navigationIcon = { IconButton(onClick = {}) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } },
+                )
+            },
+        ) { padding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                OutlinedTextField(value = "", onValueChange = {}, label = { Text("Importo *") }, prefix = { Text("€") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OutlinedTextField(value = "15 giu 2026", onValueChange = {}, label = { Text("Data") }, readOnly = true, trailingIcon = { Icon(Icons.Default.CalendarToday, null) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OutlinedTextField(value = "Stipendio giugno", onValueChange = {}, label = { Text("Note") }, modifier = Modifier.fillMaxWidth())
+                Button(onClick = {}, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Salva entrata") }
+            }
         }
     }
 }
