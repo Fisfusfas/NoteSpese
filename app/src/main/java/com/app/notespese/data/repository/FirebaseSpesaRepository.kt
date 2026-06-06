@@ -26,7 +26,7 @@ class FirebaseSpesaRepository @Inject constructor(
             .addSnapshotListener(MetadataChanges.INCLUDE) { snapshot, error ->
                 if (error != null) { close(error); return@addSnapshotListener }
                 val spese = snapshot?.documents?.mapNotNull { doc ->
-                    doc.toObject(Spesa::class.java)?.also { it.pendingWrite = doc.metadata.hasPendingWrites }
+                    doc.toObject(Spesa::class.java)?.also { it.pendingWrite = doc.metadata.hasPendingWrites() }
                 } ?: emptyList()
                 trySend(spese)
             }
@@ -40,7 +40,7 @@ class FirebaseSpesaRepository @Inject constructor(
             .addSnapshotListener(MetadataChanges.INCLUDE) { snapshot, error ->
                 if (error != null) { close(error); return@addSnapshotListener }
                 val spese = snapshot?.documents?.mapNotNull { doc ->
-                    doc.toObject(Spesa::class.java)?.also { it.pendingWrite = doc.metadata.hasPendingWrites }
+                    doc.toObject(Spesa::class.java)?.also { it.pendingWrite = doc.metadata.hasPendingWrites() }
                 } ?: emptyList()
                 trySend(spese)
             }
@@ -55,7 +55,7 @@ class FirebaseSpesaRepository @Inject constructor(
             .addSnapshotListener(MetadataChanges.INCLUDE) { snapshot, error ->
                 if (error != null) { close(error); return@addSnapshotListener }
                 val spese = snapshot?.documents?.mapNotNull { doc ->
-                    doc.toObject(Spesa::class.java)?.also { it.pendingWrite = doc.metadata.hasPendingWrites }
+                    doc.toObject(Spesa::class.java)?.also { it.pendingWrite = doc.metadata.hasPendingWrites() }
                 } ?: emptyList()
                 trySend(spese)
             }
