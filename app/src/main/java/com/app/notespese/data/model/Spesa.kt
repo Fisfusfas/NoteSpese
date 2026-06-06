@@ -2,13 +2,8 @@ package com.app.notespese.data.model
 
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
+import com.google.firebase.firestore.Exclude
 
-/**
- * Documento: gruppi/{gruppoId}/spese/{spesaId}
- *
- * [mese] e [anno] sono denormalizzati dalla [data] per permettere filtri semplici
- * su Firestore senza composite index su Timestamp range.
- */
 data class Spesa(
     @DocumentId val id: String = "",
     val importo: Double = 0.0,
@@ -21,4 +16,9 @@ data class Spesa(
     val mese: Int = 0,
     val anno: Int = 0,
     val note: String = "",
-)
+) {
+    // Campo locale: non viene mai scritto su Firestore (escluso dalla serializzazione).
+    // Viene impostato dal repository in base a DocumentSnapshot.metadata.hasPendingWrites.
+    @get:Exclude
+    var pendingWrite: Boolean = false
+}

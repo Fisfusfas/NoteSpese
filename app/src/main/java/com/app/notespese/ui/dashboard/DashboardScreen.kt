@@ -26,6 +26,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
@@ -473,12 +474,25 @@ private fun RowSpesa(spesa: Spesa, onClick: () -> Unit) {
             }
         },
         trailingContent   = {
-            Text(
-                text       = formatEuro(spesa.importo),
-                style      = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
-                color      = MaterialTheme.colorScheme.primary,
-            )
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(
+                    text       = formatEuro(spesa.importo),
+                    style      = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color      = MaterialTheme.colorScheme.primary,
+                )
+                if (!spesa.pendingWrite) {
+                    Icon(
+                        imageVector        = Icons.Default.CheckCircle,
+                        contentDescription = "Sincronizzato",
+                        tint               = MaterialTheme.colorScheme.primary,
+                        modifier           = Modifier.size(12.dp),
+                    )
+                }
+            }
         },
         leadingContent    = { Icon(Icons.Default.Receipt, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
         modifier          = Modifier.clickable(onClick = onClick),

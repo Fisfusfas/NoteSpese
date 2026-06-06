@@ -3,6 +3,7 @@ package com.app.notespese.data.repository
 import com.app.notespese.data.model.Spesa
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.MetadataChanges
 import com.google.firebase.firestore.Query
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -21,10 +22,13 @@ class FirebaseSpesaRepository @Inject constructor(
 
     override fun osservaSpese(gruppoId: String): Flow<List<Spesa>> = callbackFlow {
         val listener = speseRef(gruppoId)
-            .orderBy("data", com.google.firebase.firestore.Query.Direction.DESCENDING)
-            .addSnapshotListener { snapshot, error ->
+            .orderBy("data", Query.Direction.DESCENDING)
+            .addSnapshotListener(MetadataChanges.INCLUDE) { snapshot, error ->
                 if (error != null) { close(error); return@addSnapshotListener }
-                trySend(snapshot?.toObjects(Spesa::class.java) ?: emptyList())
+                val spese = snapshot?.documents?.mapNotNull { doc ->
+                    doc.toObject(Spesa::class.java)?.also { it.pendingWrite = doc.metadata.hasPendingWrites }
+                } ?: emptyList()
+                trySend(spese)
             }
         awaitClose { listener.remove() }
     }
@@ -33,9 +37,12 @@ class FirebaseSpesaRepository @Inject constructor(
         val listener = speseRef(gruppoId)
             .whereEqualTo("anno", anno)
             .whereEqualTo("mese", mese)
-            .addSnapshotListener { snapshot, error ->
+            .addSnapshotListener(MetadataChanges.INCLUDE) { snapshot, error ->
                 if (error != null) { close(error); return@addSnapshotListener }
-                trySend(snapshot?.toObjects(Spesa::class.java) ?: emptyList())
+                val spese = snapshot?.documents?.mapNotNull { doc ->
+                    doc.toObject(Spesa::class.java)?.also { it.pendingWrite = doc.metadata.hasPendingWrites }
+                } ?: emptyList()
+                trySend(spese)
             }
         awaitClose { listener.remove() }
     }
@@ -45,25 +52,30 @@ class FirebaseSpesaRepository @Inject constructor(
             .whereGreaterThanOrEqualTo("data", start)
             .whereLessThan("data", end)
             .orderBy("data", Query.Direction.DESCENDING)
-            .addSnapshotListener { snapshot, error ->
+            .addSnapshotListener(MetadataChanges.INCLUDE) { snapshot, error ->
                 if (error != null) { close(error); return@addSnapshotListener }
-                trySend(snapshot?.toObjects(Spesa::class.java) ?: emptyList())
+                val spese = snapshot?.documents?.mapNotNull { doc ->
+                    doc.toObject(Spesa::class.java)?.also { it.pendingWrite = doc.metadata.hasPendingWrites }
+                } ?: emptyList()
+                trySend(spese)
             }
         awaitClose { listener.remove() }
     }
 
+    // Fire-and-forget: scrive nella cache locale Firestore e torna immediatamente.
+    // La sincronizzazione col server avviene in background automaticamente.
     override suspend fun aggiungiSpesa(gruppoId: String, spesa: Spesa): Result<String> = runCatching {
         val docRef = speseRef(gruppoId).document()
-        docRef.set(spesa.copy(id = docRef.id)).await()
+        docRef.set(spesa.copy(id = docRef.id))
         docRef.id
     }
 
     override suspend fun aggiornaSpesa(gruppoId: String, spesa: Spesa): Result<Unit> = runCatching {
-        speseRef(gruppoId).document(spesa.id).set(spesa).await()
+        speseRef(gruppoId).document(spesa.id).set(spesa)
     }
 
     override suspend fun eliminaSpesa(gruppoId: String, spesaId: String): Result<Unit> = runCatching {
-        speseRef(gruppoId).document(spesaId).delete().await()
+        speseRef(gruppoId).document(spesaId).delete()
     }
 
     override suspend fun getSpesa(gruppoId: String, spesaId: String): Result<Spesa?> = runCatching {

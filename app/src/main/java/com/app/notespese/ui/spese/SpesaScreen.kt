@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
@@ -334,12 +335,25 @@ private fun RigaSpesa(spesa: Spesa, categoria: Categoria?, membri: Map<String, S
             }
         },
         trailingContent   = {
-            Text(
-                text       = NumberFormat.getCurrencyInstance(Locale.ITALY).format(spesa.importo),
-                style      = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
-                color      = MaterialTheme.colorScheme.primary,
-            )
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(
+                    text       = NumberFormat.getCurrencyInstance(Locale.ITALY).format(spesa.importo),
+                    style      = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color      = MaterialTheme.colorScheme.primary,
+                )
+                if (!spesa.pendingWrite) {
+                    Icon(
+                        imageVector        = Icons.Default.CheckCircle,
+                        contentDescription = "Sincronizzato",
+                        tint               = MaterialTheme.colorScheme.primary,
+                        modifier           = Modifier.size(12.dp),
+                    )
+                }
+            }
         },
     )
     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
