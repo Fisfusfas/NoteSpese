@@ -78,15 +78,17 @@ fun ListaGruppiScreen(
     utente: Utente,
     onCreaGruppo: () -> Unit,
     onApriGruppo: (String) -> Unit,
+    onAutoNavigaGruppo: (String) -> Unit = onApriGruppo,
     onApriProfilo: () -> Unit,
     onSignOut: () -> Unit,
     viewModel: ListaGruppiViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // Auto-naviga al gruppo di default (gruppo unico o widget selezionato)
+    // Auto-naviga al gruppo di default rimuovendo ListaGruppi dallo stack
+    // (evita il loop back → ListaGruppi → auto-naviga → GruppoHome → loop)
     LaunchedEffect(Unit) {
-        viewModel.navigaToGruppo.collect { gruppoId -> onApriGruppo(gruppoId) }
+        viewModel.navigaToGruppo.collect { gruppoId -> onAutoNavigaGruppo(gruppoId) }
     }
 
     // Naviga al gruppo dopo accettazione invito

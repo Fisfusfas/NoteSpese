@@ -36,11 +36,17 @@ fun AppNavigation(
         // ── Lista gruppi ───────────────────────────────────────────────────────
         composable(Screen.ListaGruppi.route) {
             ListaGruppiScreen(
-                utente        = utente,
-                onCreaGruppo  = { navController.navigate(Screen.CreaGruppo.route) },
-                onApriGruppo  = { gruppoId -> navController.navigate(Screen.GruppoHome.withId(gruppoId)) },
-                onApriProfilo = { navController.navigate(Screen.Profilo.route) },
-                onSignOut     = onSignOut
+                utente             = utente,
+                onCreaGruppo       = { navController.navigate(Screen.CreaGruppo.route) },
+                onApriGruppo       = { gruppoId -> navController.navigate(Screen.GruppoHome.withId(gruppoId)) },
+                onAutoNavigaGruppo = { gruppoId ->
+                    // Rimuove ListaGruppi dallo stack: GruppoHome diventa la root
+                    navController.navigate(Screen.GruppoHome.withId(gruppoId)) {
+                        popUpTo(Screen.ListaGruppi.route) { inclusive = true }
+                    }
+                },
+                onApriProfilo      = { navController.navigate(Screen.Profilo.route) },
+                onSignOut          = onSignOut
             )
         }
 
@@ -69,7 +75,14 @@ fun AppNavigation(
             val gruppoId = backStackEntry.arguments?.getString("gruppoId") ?: return@composable
             GruppoHomeScreen(
                 gruppoId              = gruppoId,
-                onApriGruppi          = { navController.popBackStack() },
+                onApriGruppi          = {
+                    // Se GruppoHome è root (auto-navigazione), porta a ListaGruppi
+                    if (!navController.popBackStack()) {
+                        navController.navigate(Screen.ListaGruppi.route) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
+                },
                 onApriImpostazioni    = { id -> navController.navigate(Screen.ImpostazioniGruppo.withId(id)) },
                 onApriStatistiche     = { id -> navController.navigate(Screen.Statistiche.withId(id)) },
                 onApriAggiungiSpesa   = { id -> navController.navigate(Screen.AggiungiSpesa.withId(id)) },
