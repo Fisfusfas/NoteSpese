@@ -53,16 +53,16 @@ class FirebaseEntrataRepository @Inject constructor(
 
     override suspend fun aggiungiEntrata(gruppoId: String, entrata: Entrata): Result<String> = runCatching {
         val docRef = entrateRef(gruppoId).document()
-        docRef.set(entrata.copy(id = docRef.id)).await()
+        docRef.set(entrata.copy(id = docRef.id))
         docRef.id
     }
 
     override suspend fun aggiornaEntrata(gruppoId: String, entrata: Entrata): Result<Unit> = runCatching {
-        entrateRef(gruppoId).document(entrata.id).set(entrata).await()
+        entrateRef(gruppoId).document(entrata.id).set(entrata)
     }
 
     override suspend fun eliminaEntrata(gruppoId: String, entrataId: String): Result<Unit> = runCatching {
-        entrateRef(gruppoId).document(entrataId).delete().await()
+        entrateRef(gruppoId).document(entrataId).delete()
     }
 
     override suspend fun getEntrata(gruppoId: String, entrataId: String): Result<Entrata?> = runCatching {

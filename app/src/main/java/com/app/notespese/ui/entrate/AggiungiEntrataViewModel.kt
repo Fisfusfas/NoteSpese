@@ -108,17 +108,15 @@ class AggiungiEntrataViewModel @Inject constructor(
             note        = note.trim(),
             data        = dataTs,
         )
+        // Chiude il form immediatamente: la write è fire-and-forget sulla cache locale Firestore
+        esito = Esito.Salvato
+
         viewModelScope.launch {
-            esito = Esito.Caricamento
-            val result: Result<*> = if (isModifica) {
+            if (isModifica) {
                 entrataRepository.aggiornaEntrata(gruppoId, entrata)
             } else {
                 entrataRepository.aggiungiEntrata(gruppoId, entrata)
             }
-            esito = result.fold(
-                onSuccess = { Esito.Salvato },
-                onFailure = { Esito.Errore(it.message ?: "Errore nel salvataggio") },
-            )
         }
     }
 

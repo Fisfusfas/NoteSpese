@@ -139,17 +139,16 @@ class AggiungiSpesaViewModel @Inject constructor(
         val catId = categoriaId
         val mese  = dataSelezionata.monthValue
         val anno  = dataSelezionata.year
+
+        // Chiude il form immediatamente: la write è fire-and-forget sulla cache locale Firestore
+        esito = Esito.Salvato
+
         viewModelScope.launch {
-            esito = Esito.Caricamento
             val result: Result<*> = if (isModifica) {
                 spesaRepository.aggiornaSpesa(gruppoId, spesa)
             } else {
                 spesaRepository.aggiungiSpesa(gruppoId, spesa)
             }
-            esito = result.fold(
-                onSuccess = { Esito.Salvato },
-                onFailure = { Esito.Errore(it.message ?: "Errore nel salvataggio") },
-            )
             if (result.isSuccess && !isModifica && catId.isNotEmpty()) {
                 checkBudget(catId, importoDouble, mese, anno)
             }
