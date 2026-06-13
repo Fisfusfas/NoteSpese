@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -18,8 +19,11 @@ import com.app.notespese.data.repository.CategoriaRepository
 import com.app.notespese.data.repository.GruppoRepository
 import com.app.notespese.data.repository.SpesaRepository
 import com.app.notespese.notification.NotificationHelper
+import com.app.notespese.widget.SpeseWidget
 import com.google.firebase.Timestamp
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import androidx.glance.appwidget.updateAll
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
@@ -35,6 +39,7 @@ import javax.inject.Inject
 @HiltViewModel
 class AggiungiSpesaViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
+    @ApplicationContext private val context: Context,
     private val spesaRepository: SpesaRepository,
     private val categoriaRepository: CategoriaRepository,
     private val budgetRepository: BudgetRepository,
@@ -152,6 +157,7 @@ class AggiungiSpesaViewModel @Inject constructor(
             if (result.isSuccess && !isModifica && catId.isNotEmpty()) {
                 checkBudget(catId, importoDouble, mese, anno)
             }
+            SpeseWidget().updateAll(context)
         }
     }
 
@@ -180,10 +186,11 @@ class AggiungiSpesaViewModel @Inject constructor(
             .groupBy { it.categoriaId }
             .maxByOrNull { it.value.size }
             ?.key
-        categoriaConsigliata = candidato
-        if (candidato != null && categoriaId.isEmpty()) {
-            categoriaId = candidato
+        if (candidato != null) {
+            categoriaConsigliata = candidato
+            if (categoriaId.isEmpty()) categoriaId = candidato
         }
+        // When no match, keep the existing badge so it doesn't disappear mid-typing
     }
 
     fun creaCategoria(nome: String, colore: String, icona: String = "label") {

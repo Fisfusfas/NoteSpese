@@ -144,8 +144,7 @@ fun GruppoHomeScreen(
                                 modifier = Modifier
                                     .size(28.dp)
                                     .clip(CircleShape)
-                                    .background(gruppoColore)
-                                    .padding(end = 8.dp),
+                                    .background(gruppoColore),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(
@@ -211,6 +210,7 @@ fun GruppoHomeScreen(
                     0 -> DashboardTabContent(
                         onApriAnalisi        = { m, a -> onApriAnalisi(gruppoId, m, a) },
                         onApriAnalisiEntrate = { m, a -> onApriAnalisiEntrate(gruppoId, m, a) },
+                        onApriSpese          = { selectedTab = 1 },
                         viewModel            = dashboardViewModel,
                     )
                     1 -> SpesaListContent(

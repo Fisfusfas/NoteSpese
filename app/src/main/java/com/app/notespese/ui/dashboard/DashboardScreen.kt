@@ -125,6 +125,7 @@ fun DashboardScreen(
 fun DashboardTabContent(
     onApriAnalisi: (Int, Int) -> Unit,
     onApriAnalisiEntrate: (Int, Int) -> Unit,
+    onApriSpese: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: DashboardViewModel = hiltViewModel(),
 ) {
@@ -147,6 +148,7 @@ fun DashboardTabContent(
                 modifier             = modifier,
                 onApriAnalisi        = { onApriAnalisi(state.mese, state.anno) },
                 onApriAnalisiEntrate = { onApriAnalisiEntrate(state.mese, state.anno) },
+                onApriSpese          = onApriSpese,
                 onMesePrecedente     = viewModel::mesePrecedente,
                 onMeseSuccessivo     = viewModel::meseSuccessivo,
                 onTornaAdOggi        = viewModel::tornaAdOggi,
@@ -163,6 +165,7 @@ private fun DashboardPageContent(
     modifier: Modifier = Modifier,
     onApriAnalisi: () -> Unit,
     onApriAnalisiEntrate: () -> Unit,
+    onApriSpese: () -> Unit = {},
     onMesePrecedente: () -> Unit,
     onMeseSuccessivo: () -> Unit,
     onTornaAdOggi: () -> Unit,
@@ -242,7 +245,7 @@ private fun DashboardPageContent(
                 )
             }
             items(state.speseDelMese.take(5)) { spesa ->
-                RowSpesa(spesa = spesa, onClick = onApriAnalisi)
+                RowSpesa(spesa = spesa, onClick = onApriSpese)
             }
             if (state.speseDelMese.size > 5) {
                 item {

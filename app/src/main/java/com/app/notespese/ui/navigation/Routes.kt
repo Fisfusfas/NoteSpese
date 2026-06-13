@@ -5,7 +5,10 @@ sealed class Screen(val route: String) {
     data object Login : Screen("login")
 
     // ── App principale ────────────────────────────────────────────────────────
-    data object ListaGruppi  : Screen("lista_gruppi")
+    data object ListaGruppi  : Screen("lista_gruppi?noAutoNav={noAutoNav}") {
+        const val BASE = "lista_gruppi"
+        fun noAutoNav() = "lista_gruppi?noAutoNav=true"
+    }
     data object CreaGruppo   : Screen("crea_gruppo")
     data object AccettaInvito: Screen("accetta_invito")
     data object Profilo      : Screen("profilo")

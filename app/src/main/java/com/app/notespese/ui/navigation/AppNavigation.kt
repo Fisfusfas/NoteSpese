@@ -30,16 +30,20 @@ fun AppNavigation(
 
     NavHost(
         navController    = navController,
-        startDestination = Screen.ListaGruppi.route
+        startDestination = Screen.ListaGruppi.BASE
     ) {
 
         // ── Lista gruppi ───────────────────────────────────────────────────────
-        composable(Screen.ListaGruppi.route) {
+        composable(
+            route     = Screen.ListaGruppi.route,
+            arguments = listOf(navArgument("noAutoNav") { type = NavType.BoolType; defaultValue = false }),
+        ) { backStackEntry ->
+            val noAutoNav = backStackEntry.arguments?.getBoolean("noAutoNav") ?: false
             ListaGruppiScreen(
                 utente             = utente,
                 onCreaGruppo       = { navController.navigate(Screen.CreaGruppo.route) },
                 onApriGruppo       = { gruppoId -> navController.navigate(Screen.GruppoHome.withId(gruppoId)) },
-                onAutoNavigaGruppo = { gruppoId ->
+                onAutoNavigaGruppo = if (noAutoNav) { _ -> } else { gruppoId ->
                     // Rimuove ListaGruppi dallo stack: GruppoHome diventa la root
                     navController.navigate(Screen.GruppoHome.withId(gruppoId)) {
                         popUpTo(Screen.ListaGruppi.route) { inclusive = true }
@@ -76,9 +80,9 @@ fun AppNavigation(
             GruppoHomeScreen(
                 gruppoId              = gruppoId,
                 onApriGruppi          = {
-                    // Se GruppoHome è root (auto-navigazione), porta a ListaGruppi
-                    if (!navController.popBackStack()) {
-                        navController.navigate(Screen.ListaGruppi.route) {
+                    // Prova a tornare a ListaGruppi già in stack; se non c'è, la naviga con noAutoNav=true
+                    if (!navController.popBackStack(Screen.ListaGruppi.route, inclusive = false)) {
+                        navController.navigate(Screen.ListaGruppi.noAutoNav()) {
                             popUpTo(0) { inclusive = true }
                         }
                     }

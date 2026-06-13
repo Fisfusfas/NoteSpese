@@ -3,6 +3,8 @@ package com.app.notespese.ui.entrate
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import android.content.Context
+import androidx.glance.appwidget.updateAll
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -14,7 +16,9 @@ import com.app.notespese.data.repository.AuthRepository
 import com.app.notespese.data.repository.CategoriaRepository
 import com.app.notespese.data.repository.EntrataRepository
 import com.app.notespese.data.repository.GruppoRepository
+import com.app.notespese.widget.SpeseWidget
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -30,6 +34,7 @@ import javax.inject.Inject
 @HiltViewModel
 class AggiungiEntrataViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
+    @ApplicationContext private val context: Context,
     private val entrataRepository: EntrataRepository,
     private val categoriaRepository: CategoriaRepository,
     gruppoRepository: GruppoRepository,
@@ -117,6 +122,7 @@ class AggiungiEntrataViewModel @Inject constructor(
             } else {
                 entrataRepository.aggiungiEntrata(gruppoId, entrata)
             }
+            SpeseWidget().updateAll(context)
         }
     }
 
