@@ -2,10 +2,155 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Sviluppo: tutti gli utenti autenticati (Google + anonimo) possono leggere/scrivere.
-    // TODO: applicare regole granulari prima della pubblicazione su Play Store.
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+    // ─── Helper functions ──────────────────────────────────────────────────────
+
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function uid() {
+      return request.auth.uid;
+    }
+
+    // Controlla se l'utente è nell'array membroIds del gruppo (lettura diretta, nessun get extra)
+    function isMembro(gruppoId) {
+      return isAuth()
+        && uid() in get(/databases/$(database)/documents/gruppi/$(gruppoId)).data.membroIds;
+    }
+
+    // Controlla se l'utente è ADMIN del gruppo (richiede un get aggiuntivo sul doc membro)
+    function isAdmin(gruppoId) {
+      let memDoc = get(/databases/$(database)/documents/gruppi/$(gruppoId)/membri/$(uid()));
+      return isMembro(gruppoId) && memDoc != null && memDoc.data.ruolo == 'ADMIN';
+    }
+
+    // ─── Profili utente ────────────────────────────────────────────────────────
+
+    match /users/{userId} {
+      // Qualsiasi utente autenticato può leggere i profili altrui (per mostrare nomi nei gruppi)
+      allow read: if isAuth();
+      // Solo il proprietario può scrivere il proprio profilo
+      allow write: if isAuth() && uid() == userId;
+    }
+
+    // ─── Gruppi ────────────────────────────────────────────────────────────────
+
+    match /gruppi/{gruppoId} {
+      // Solo i membri del gruppo possono leggere i dati
+      allow read: if isAuth() && uid() in resource.data.membroIds;
+
+      // Chiunque autenticato può creare un gruppo, a patto di essere il creatore e membro
+      allow create: if isAuth()
+                    && request.resource.data.creatoDa == uid()
+                    && uid() in request.resource.data.membroIds;
+
+      // Solo gli admin possono aggiornare (nome, colore, icona, modalitaSplit, membroIds)
+      allow update: if isAdmin(gruppoId);
+
+      // Solo gli admin possono eliminare il documento radice del gruppo
+      allow delete: if isAdmin(gruppoId);
+
+      // ─── Membri ─────────────────────────────────────────────────────────────
+
+      match /membri/{membroId} {
+        allow read: if isMembro(gruppoId);
+
+        // Admin può aggiungere qualsiasi membro.
+        // Un utente può creare il proprio doc (creazione gruppo o accettazione invito):
+        //   - il creatore del gruppo può impostare ADMIN su se stesso
+        //   - tutti gli altri si auto-creano solo come MEMBRO
+        allow create: if isAdmin(gruppoId)
+                      || (isAuth() && uid() == membroId && (
+                            request.resource.data.ruolo == 'MEMBRO'
+                            || get(/databases/$(database)/documents/gruppi/$(gruppoId)).data.creatoDa == uid()
+                         ));
+
+        // Admin può modificare qualsiasi membro.
+        // Un membro può aggiornare solo il proprio doc ma non può cambiare il proprio ruolo.
+        allow update: if isAdmin(gruppoId)
+                      || (isMembro(gruppoId) && uid() == membroId
+                          && request.resource.data.ruolo == resource.data.ruolo);
+
+        // Admin può rimuovere chiunque; un membro può abbandonare il gruppo da solo
+        allow delete: if isAdmin(gruppoId)
+                      || (isMembro(gruppoId) && uid() == membroId);
+      }
+
+      // ─── Spese ──────────────────────────────────────────────────────────────
+
+      match /spese/{spesaId} {
+        allow read, write: if isMembro(gruppoId);
+      }
+
+      // ─── Entrate ────────────────────────────────────────────────────────────
+
+      match /entrate/{entrataId} {
+        allow read, write: if isMembro(gruppoId);
+      }
+
+      // ─── Categorie ──────────────────────────────────────────────────────────
+
+      match /categorie/{categoriaId} {
+        allow read, write: if isMembro(gruppoId);
+      }
+
+      // ─── Budget ─────────────────────────────────────────────────────────────
+      // Lettura per tutti i membri; scrittura solo per gli admin (decisione di gruppo)
+
+      match /budget/{categoriaId} {
+        allow read: if isMembro(gruppoId);
+        allow write: if isAdmin(gruppoId);
+      }
+
+      // ─── Configurazione mese ────────────────────────────────────────────────
+      // modalitaSplit e chiusura mese sono decisioni dell'admin
+
+      match /mesi/{meseId} {
+        allow read: if isMembro(gruppoId);
+        allow write: if isAdmin(gruppoId);
+
+        // ─── Saldi ────────────────────────────────────────────────────────────
+        // Tutti i membri leggono; solo i diretti interessati aggiornano il proprio stato
+
+        match /saldi/{saldoId} {
+          allow read: if isMembro(gruppoId);
+          allow create: if isMembro(gruppoId);
+          allow update: if isMembro(gruppoId)
+                        && (uid() == resource.data.da || uid() == resource.data.a);
+          allow delete: if isAdmin(gruppoId);
+        }
+      }
+
+      // ─── Ricorrenze ─────────────────────────────────────────────────────────
+
+      match /ricorrenze/{ricorrenzaId} {
+        allow read, write: if isMembro(gruppoId);
+      }
+
+      // ─── Debiti ─────────────────────────────────────────────────────────────
+
+      match /debiti/{debitoId} {
+        allow read, write: if isMembro(gruppoId);
+      }
+    }
+
+    // ─── Inviti ────────────────────────────────────────────────────────────────
+
+    match /inviti/{invitoId} {
+      // Qualsiasi utente autenticato può cercare un invito per codice (necessario per accettarlo)
+      allow read: if isAuth();
+
+      // Solo gli admin del gruppo possono creare inviti
+      allow create: if isAdmin(request.resource.data.gruppoId);
+
+      // Qualsiasi utente autenticato può aggiornare (accettare/rifiutare l'invito)
+      // Il codice applicativo gestisce la validazione dello stato e dell'invitato
+      allow update: if isAuth();
+
+      // Solo chi ha creato l'invito o un admin del gruppo può eliminarlo
+      allow delete: if isAuth()
+                    && (uid() == resource.data.creatoDa
+                        || isAdmin(resource.data.gruppoId));
     }
   }
 }
